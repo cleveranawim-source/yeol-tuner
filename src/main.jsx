@@ -201,7 +201,7 @@ function InstrumentVisual({ instrumentKey, instrument, strings, activeString }) 
   const activeIndex = Math.max(0, strings.findIndex((string) => string.id === activeString.id));
 
   return (
-    <div className={`instrument-visual ${shape}`} aria-label={`${instrument.label} 현 위치`}>
+    <div className={`instrument-visual ${shape} ${instrumentKey}`} aria-label={`${instrument.label} 현 위치`}>
       <div className="instrument-label">
         <span>{instrument.label}</span>
         <strong>{activeString.name}</strong>

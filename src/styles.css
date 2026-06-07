@@ -524,6 +524,78 @@ h1 {
   box-shadow: 28px 0 0 rgba(17, 11, 9, 0.52);
 }
 
+.instrument-visual.violin .head {
+  width: 62px;
+  height: 40px;
+}
+
+.instrument-visual.violin .neck {
+  width: 78px;
+}
+
+.instrument-visual.violin .body {
+  width: 112px;
+  height: 88px;
+  border-radius: 42% 42% 54% 54%;
+}
+
+.instrument-visual.viola .head {
+  width: 70px;
+}
+
+.instrument-visual.viola .neck {
+  width: 88px;
+}
+
+.instrument-visual.viola .body {
+  width: 126px;
+  height: 92px;
+  border-radius: 45% 45% 52% 52%;
+}
+
+.instrument-visual.cello .head {
+  width: 82px;
+  height: 48px;
+}
+
+.instrument-visual.cello .neck {
+  top: 40px;
+  width: 108px;
+  height: 86px;
+}
+
+.instrument-visual.cello .body {
+  bottom: -66px;
+  width: 150px;
+  height: 110px;
+  border-radius: 40% 40% 56% 56%;
+}
+
+.instrument-visual.doubleBass .head {
+  width: 90px;
+  height: 50px;
+  border-radius: 24px 24px 18px 18px;
+}
+
+.instrument-visual.doubleBass .neck {
+  top: 38px;
+  width: 120px;
+  height: 90px;
+}
+
+.instrument-visual.doubleBass .body {
+  bottom: -70px;
+  width: 170px;
+  height: 118px;
+  border-radius: 36% 36% 58% 58%;
+}
+
+.instrument-visual.doubleBass .sound-hole {
+  height: 36px;
+  left: 37%;
+  box-shadow: 34px 0 0 rgba(17, 11, 9, 0.52);
+}
+
 .meter {
   position: relative;
   z-index: 1;
@@ -998,6 +1070,32 @@ h1 {
 
   .instrument-visual.bowed .body {
     bottom: -64px;
+  }
+
+  .instrument-visual.violin .body {
+    bottom: -58px;
+  }
+
+  .instrument-visual.viola .body {
+    bottom: -60px;
+  }
+
+  .instrument-visual.cello .neck {
+    top: 29px;
+    height: 61px;
+  }
+
+  .instrument-visual.cello .body {
+    bottom: -72px;
+  }
+
+  .instrument-visual.doubleBass .neck {
+    top: 29px;
+    height: 62px;
+  }
+
+  .instrument-visual.doubleBass .body {
+    bottom: -76px;
   }
 
   .rail {
