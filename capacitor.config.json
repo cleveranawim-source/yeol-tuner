@@ -1,0 +1,13 @@
+{
+  "appId": "com.yeolstudio.yeoltuner",
+  "appName": "YEOL Tuner",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

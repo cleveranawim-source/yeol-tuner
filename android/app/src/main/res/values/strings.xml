@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">YEOL Tuner</string>
+    <string name="title_activity_main">YEOL Tuner</string>
+    <string name="package_name">com.yeolstudio.yeoltuner</string>
+    <string name="custom_url_scheme">com.yeolstudio.yeoltuner</string>
+</resources>
