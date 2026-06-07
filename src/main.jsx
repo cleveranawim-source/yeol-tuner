@@ -43,6 +43,16 @@ const INSTRUMENTS = {
           { id: 'bass-standard-G2', name: '1G', note: 'G2', freq: 98.0 }
         ]
       },
+      fiveString: {
+        label: '5-String',
+        strings: [
+          { id: 'bass-five-B0', name: '5B', note: 'B0', freq: 30.87 },
+          { id: 'bass-five-E1', name: '4E', note: 'E1', freq: 41.2 },
+          { id: 'bass-five-A1', name: '3A', note: 'A1', freq: 55.0 },
+          { id: 'bass-five-D2', name: '2D', note: 'D2', freq: 73.42 },
+          { id: 'bass-five-G2', name: '1G', note: 'G2', freq: 98.0 }
+        ]
+      },
       dropD: {
         label: 'Drop D',
         strings: [
@@ -271,7 +281,7 @@ function autoCorrelate(buffer, sampleRate) {
 
   let bestOffset = -1;
   let bestCorrelation = Number.POSITIVE_INFINITY;
-  for (let offset = Math.floor(sampleRate / 700); offset < Math.floor(sampleRate / 60); offset += 1) {
+  for (let offset = Math.floor(sampleRate / 700); offset < Math.floor(sampleRate / 28); offset += 1) {
     if (correlations[offset] < bestCorrelation) {
       bestCorrelation = correlations[offset];
       bestOffset = offset;
@@ -285,7 +295,7 @@ function autoCorrelate(buffer, sampleRate) {
   const shift = (next - prev) / (2 * (2 * bestCorrelation - next - prev));
   const frequency = sampleRate / (bestOffset + (Number.isFinite(shift) ? shift : 0));
 
-  if (!Number.isFinite(frequency) || frequency < 35 || frequency > 700) return null;
+  if (!Number.isFinite(frequency) || frequency < 28 || frequency > 700) return null;
   return frequency;
 }
 
