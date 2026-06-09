@@ -250,11 +250,11 @@ function autoCorrelate(buffer, sampleRate) {
     rms += buffer[i] * buffer[i];
   }
   rms = Math.sqrt(rms / size);
-  if (rms < 0.015) return null;
+  if (rms < 0.0045) return null;
 
   let start = 0;
   let end = size - 1;
-  const threshold = 0.2;
+  const threshold = 0.08;
 
   for (let i = 0; i < size / 2; i += 1) {
     if (Math.abs(buffer[i]) < threshold) {
@@ -271,6 +271,8 @@ function autoCorrelate(buffer, sampleRate) {
   }
 
   const sliced = buffer.slice(start, end);
+  if (sliced.length < Math.floor(sampleRate / 700) * 2) return null;
+
   const correlations = new Array(sliced.length).fill(0);
 
   for (let offset = 0; offset < sliced.length; offset += 1) {
@@ -289,6 +291,9 @@ function autoCorrelate(buffer, sampleRate) {
   }
 
   if (bestOffset <= 0) return null;
+
+  const normalizedCorrelation = bestCorrelation / Math.max(1, sliced.length - bestOffset);
+  if (normalizedCorrelation > Math.max(0.09, rms * 2.8)) return null;
 
   const prev = correlations[bestOffset - 1] ?? bestCorrelation;
   const next = correlations[bestOffset + 1] ?? bestCorrelation;
@@ -382,9 +387,12 @@ function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
+          channelCount: 1,
           echoCancellation: false,
           noiseSuppression: false,
-          autoGainControl: false
+          autoGainControl: true,
+          latency: 0,
+          sampleSize: 16
         }
       });
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -392,7 +400,8 @@ function App() {
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 4096;
+      analyser.fftSize = 8192;
+      analyser.smoothingTimeConstant = 0;
       source.connect(analyser);
       bufferRef.current = new Float32Array(analyser.fftSize);
       audioContextRef.current = audioContext;
@@ -441,7 +450,7 @@ function App() {
     for (let i = 0; i < buffer.length; i += 1) {
       rms += buffer[i] * buffer[i];
     }
-    setVolume(Math.min(1, Math.sqrt(rms / buffer.length) * 8));
+    setVolume(Math.min(1, Math.sqrt(rms / buffer.length) * 28));
 
     const pitch = autoCorrelate(buffer, audioContext.sampleRate);
     if (pitch) {

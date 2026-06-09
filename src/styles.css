@@ -28,8 +28,11 @@ button {
 
 .app {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: auto minmax(470px, 1fr) auto auto;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   overflow-x: hidden;
   color: #f4efe7;
   background:
@@ -954,7 +957,7 @@ h1 {
   .topbar {
     align-items: center;
     flex-direction: column;
-    padding: 16px 0 10px;
+    padding: 20px 0 10px;
   }
 
   .brand {
@@ -982,6 +985,10 @@ h1 {
 }
 
 @media (max-width: 480px) {
+  .app {
+    grid-template-rows: auto minmax(390px, auto) auto auto;
+  }
+
   .topbar,
   .hero,
   .strings,
@@ -989,8 +996,14 @@ h1 {
     width: min(100% - 20px, 1180px);
   }
 
+  .topbar {
+    min-height: auto;
+    gap: 12px;
+    padding-top: max(18px, calc(env(safe-area-inset-top, 0px) + 16px));
+  }
+
   .hero {
-    padding-top: 10px;
+    padding-top: 4px;
   }
 
   .tuner-console {
