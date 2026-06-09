@@ -184,6 +184,9 @@ const INSTRUMENTS = {
 };
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const ACTIVE_PITCH_ANALYSIS_INTERVAL_MS = 35;
+const IDLE_PITCH_ANALYSIS_INTERVAL_MS = 95;
+const SILENT_ANALYSIS_LIMIT = 8;
 
 function frequencyToNote(frequency) {
   const midi = Math.round(69 + 12 * Math.log2(frequency / 440));
@@ -242,7 +245,7 @@ function InstrumentVisual({ instrumentKey, instrument, strings, activeString }) 
   );
 }
 
-function autoCorrelate(buffer, sampleRate) {
+function autoCorrelate(buffer, sampleRate, frequencyRange = { min: 28, max: 700 }) {
   const size = buffer.length;
   let rms = 0;
 
@@ -250,7 +253,7 @@ function autoCorrelate(buffer, sampleRate) {
     rms += buffer[i] * buffer[i];
   }
   rms = Math.sqrt(rms / size);
-  if (rms < 0.0045) return null;
+  if (rms < 0.0032) return null;
 
   let start = 0;
   let end = size - 1;
@@ -271,36 +274,42 @@ function autoCorrelate(buffer, sampleRate) {
   }
 
   const sliced = buffer.slice(start, end);
-  if (sliced.length < Math.floor(sampleRate / 700) * 2) return null;
-
-  const correlations = new Array(sliced.length).fill(0);
-
-  for (let offset = 0; offset < sliced.length; offset += 1) {
-    for (let i = 0; i < sliced.length - offset; i += 1) {
-      correlations[offset] += Math.abs(sliced[i] - sliced[i + offset]);
-    }
-  }
+  const minFrequency = Math.max(28, frequencyRange.min);
+  const maxFrequency = Math.min(700, frequencyRange.max);
+  if (sliced.length < Math.floor(sampleRate / maxFrequency) * 2) return null;
 
   let bestOffset = -1;
   let bestCorrelation = Number.POSITIVE_INFINITY;
-  for (let offset = Math.floor(sampleRate / 700); offset < Math.floor(sampleRate / 28); offset += 1) {
-    if (correlations[offset] < bestCorrelation) {
-      bestCorrelation = correlations[offset];
+  const minOffset = Math.floor(sampleRate / maxFrequency);
+  const maxOffset = Math.min(Math.floor(sampleRate / minFrequency), sliced.length - 1);
+
+  const correlationAt = (offset) => {
+    let correlation = 0;
+    const sampleCount = sliced.length - offset;
+    for (let i = 0; i < sampleCount; i += 1) {
+      correlation += Math.abs(sliced[i] - sliced[i + offset]);
+    }
+    return correlation / Math.max(1, sampleCount);
+  };
+
+  for (let offset = minOffset; offset < maxOffset; offset += 1) {
+    const correlation = correlationAt(offset);
+    if (correlation < bestCorrelation) {
+      bestCorrelation = correlation;
       bestOffset = offset;
     }
   }
 
   if (bestOffset <= 0) return null;
 
-  const normalizedCorrelation = bestCorrelation / Math.max(1, sliced.length - bestOffset);
-  if (normalizedCorrelation > Math.max(0.09, rms * 2.8)) return null;
+  if (bestCorrelation > Math.max(0.09, rms * 2.8)) return null;
 
-  const prev = correlations[bestOffset - 1] ?? bestCorrelation;
-  const next = correlations[bestOffset + 1] ?? bestCorrelation;
+  const prev = bestOffset > minOffset ? correlationAt(bestOffset - 1) : bestCorrelation;
+  const next = bestOffset < maxOffset - 1 ? correlationAt(bestOffset + 1) : bestCorrelation;
   const shift = (next - prev) / (2 * (2 * bestCorrelation - next - prev));
   const frequency = sampleRate / (bestOffset + (Number.isFinite(shift) ? shift : 0));
 
-  if (!Number.isFinite(frequency) || frequency < 28 || frequency > 700) return null;
+  if (!Number.isFinite(frequency) || frequency < minFrequency || frequency > maxFrequency) return null;
   return frequency;
 }
 
@@ -328,6 +337,13 @@ function App() {
   const availableTuningKeys = Object.keys(instrument.tunings);
   const activeTuningKey = instrument.tunings[tuningKey] ? tuningKey : availableTuningKeys[0];
   const tuning = instrument.tunings[activeTuningKey];
+  const tuningRange = useMemo(() => {
+    const freqs = tuning.strings.map((string) => string.freq);
+    return {
+      min: Math.max(28, Math.min(...freqs) * 0.72),
+      max: Math.min(700, Math.max(...freqs) * 1.38)
+    };
+  }, [tuning]);
 
   const selectedString = useMemo(() => {
     return tuning.strings.find((string) => string.id === selectedStringId) ?? tuning.strings[0];
@@ -400,7 +416,7 @@ function App() {
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 8192;
+      analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0;
       source.connect(analyser);
       bufferRef.current = new Float32Array(analyser.fftSize);
@@ -427,7 +443,7 @@ function App() {
       userStoppedRef.current = true;
       setNeedsGestureStart(false);
     }
-    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    if (frameRef.current) clearTimeout(frameRef.current);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     audioContextRef.current?.close();
     audioContextRef.current = null;
@@ -450,19 +466,24 @@ function App() {
     for (let i = 0; i < buffer.length; i += 1) {
       rms += buffer[i] * buffer[i];
     }
-    setVolume(Math.min(1, Math.sqrt(rms / buffer.length) * 28));
+    const signalLevel = Math.sqrt(rms / buffer.length);
+    setVolume(Math.min(1, signalLevel * 28));
 
-    const pitch = autoCorrelate(buffer, audioContext.sampleRate);
+    const analysisInterval = signalLevel >= 0.0032
+      ? ACTIVE_PITCH_ANALYSIS_INTERVAL_MS
+      : IDLE_PITCH_ANALYSIS_INTERVAL_MS;
+
+    const pitch = autoCorrelate(buffer, audioContext.sampleRate, tuningRange);
     if (pitch) {
       silentFramesRef.current = 0;
-      setFrequency((previous) => pitch ? (previous ? previous * 0.84 + pitch * 0.16 : pitch) : previous);
+      setFrequency((previous) => pitch ? (previous ? previous * 0.68 + pitch * 0.32 : pitch) : previous);
     } else {
       silentFramesRef.current += 1;
-      if (silentFramesRef.current > 18) {
+      if (silentFramesRef.current > SILENT_ANALYSIS_LIMIT) {
         setFrequency(null);
       }
     }
-    frameRef.current = requestAnimationFrame(tick);
+    frameRef.current = window.setTimeout(tick, analysisInterval);
   }
 
   useEffect(() => {
