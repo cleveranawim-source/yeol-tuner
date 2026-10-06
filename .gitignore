@@ -19,3 +19,8 @@ android/app/build/
 
 ios/App/build/
 ios/App/DerivedData/
+
+# 로컬 도구 설정·스토어 제출용 이미지(용량이 커서 저장소에는 올리지 않음)
+.claude/
+store-screenshots/
+play-store-assets/

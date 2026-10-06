@@ -15,15 +15,20 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,
 select {
   font: inherit;
+  touch-action: manipulation;
 }
 
 button {
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .app {
@@ -65,16 +70,17 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(240, 201, 133, 0.34);
-  border-radius: 8px;
-  background: linear-gradient(145deg, #f0c985, #bd4c37);
-  box-shadow: 0 12px 34px rgba(189, 76, 55, 0.28);
-  color: #131618;
+  border: 1px solid rgba(255, 248, 236, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
 }
 
-.brand-mark svg {
-  width: 23px;
-  height: 23px;
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .brand-name {
@@ -232,6 +238,7 @@ h1 {
   color: #ff8d73;
   font-size: clamp(1.1rem, 2vw, 1.45rem);
   font-weight: 900;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
 .status.idle {
@@ -679,13 +686,31 @@ h1 {
   box-shadow: 0 0 20px rgba(97, 224, 193, 0.85);
 }
 
+/* 니들은 트랙 전체 폭을 차지하는 레이어이고, 위치는 transform으로만 바꾼다.
+   translateX(%)는 자기 폭(=트랙 폭) 기준이므로 (needle-position - 50%)로
+   0~100% 위치를 정확히 매핑한다. left 대신 transform을 쓰면 레이아웃 대신
+   GPU 합성만 일어나 리페인트가 사라진다 (발열 핵심 수정). */
 .needle {
   position: absolute;
-  left: var(--needle-position, 50%);
+  left: 0;
+  right: 0;
   bottom: 13px;
-  width: 8px;
   height: 80px;
-  transform-origin: 50% 50%;
+  --needle-h: 80px;
+  pointer-events: none;
+  transform: translateX(calc(var(--needle-position, 50%) - 50%));
+  /* 갱신 간격(70ms+)보다 길게 잡아 스텝이 아닌 연속 활강으로 보이게 한다. */
+  transition: transform 200ms cubic-bezier(0.25, 0.6, 0.3, 1);
+  will-change: transform;
+}
+
+.needle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 8px;
+  height: var(--needle-h);
   transform: translateX(-50%);
   border-radius: 99px;
   background: linear-gradient(180deg, #fff1c7 0%, #f0c985 45%, #c98245 100%);
@@ -693,7 +718,15 @@ h1 {
     0 0 0 2px rgba(255, 248, 236, 0.72),
     0 0 18px rgba(240, 201, 133, 0.46),
     0 5px 18px rgba(0, 0, 0, 0.40);
-  transition: left 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.needle.good::before {
+  background: linear-gradient(180deg, #d9fff2 0%, #61e0c1 45%, #2aa98b 100%);
+  box-shadow:
+    0 0 0 2px rgba(217, 255, 242, 0.78),
+    0 0 26px rgba(97, 224, 193, 0.72),
+    0 5px 18px rgba(0, 0, 0, 0.40);
 }
 
 .needle-track {
@@ -714,6 +747,8 @@ h1 {
   color: #fff8ec;
   font-size: 2rem;
   font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .cents small {
@@ -795,7 +830,7 @@ h1 {
 .mic,
 .icon-button {
   border: 0;
-  min-height: 42px;
+  min-height: 44px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -818,7 +853,7 @@ h1 {
 }
 
 .icon-button {
-  width: 42px;
+  width: 44px;
   border: 1px solid rgba(255, 248, 236, 0.16);
   background: rgba(255, 248, 236, 0.10);
   color: #fff8ec;
@@ -999,7 +1034,8 @@ h1 {
   .topbar {
     min-height: auto;
     gap: 12px;
-    padding-top: max(18px, calc(env(safe-area-inset-top, 0px) + 16px));
+    /* 안전영역 패딩은 .app이 이미 적용하므로 여기서 또 더하지 않는다 (이중 여백 버그 수정) */
+    padding-top: 10px;
   }
 
   .hero {
@@ -1125,6 +1161,7 @@ h1 {
 
   .needle {
     height: 56px;
+    --needle-h: 56px;
   }
 
   .cents span {
@@ -1161,24 +1198,24 @@ h1 {
 
   .mic,
   .icon-button {
-    min-height: 32px;
+    min-height: 44px;
     gap: 6px;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
   }
 
   .mic {
-    padding: 0 10px;
-    min-width: 86px;
+    padding: 0 14px;
+    min-width: 104px;
   }
 
   .icon-button {
-    width: 32px;
+    width: 44px;
   }
 
   .mic svg,
   .icon-button svg {
-    width: 13px;
-    height: 13px;
+    width: 15px;
+    height: 15px;
   }
 
   .strings {
@@ -1229,13 +1266,13 @@ h1 {
   }
 
   .details span {
-    font-size: 0.58rem;
+    font-size: 0.66rem;
     line-height: 1.05;
     white-space: nowrap;
   }
 
   .details strong {
-    font-size: clamp(0.7rem, 3vw, 0.84rem);
+    font-size: clamp(0.76rem, 3.2vw, 0.9rem);
     line-height: 1.1;
     white-space: nowrap;
   }
@@ -1247,5 +1284,229 @@ h1 {
   .level svg {
     width: 14px;
     height: 14px;
+  }
+}
+
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.segmented button svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.view-switch button {
+  padding: 0 12px;
+  font-size: 0.95rem;
+}
+
+/* 모드 전환은 최상위 컨트롤: 좁은 화면에서는 한 줄을 통째로 차지해
+   Tuner/Metronome 라벨이 상자 밖으로 넘치지 않게 한다. */
+@media (max-width: 780px) {
+  .segmented.view-switch {
+    flex: 1 1 100%;
+  }
+}
+
+.metronome-console {
+  gap: 20px;
+}
+
+.metronome-console .readout {
+  min-height: 150px;
+}
+
+.beat-dots {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+  min-height: 30px;
+  flex-wrap: wrap;
+}
+
+.beat-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 248, 236, 0.22);
+  background: rgba(255, 248, 236, 0.12);
+  transition: transform 90ms ease, background 90ms ease, box-shadow 90ms ease;
+}
+
+.beat-dot.accent {
+  border-color: rgba(240, 201, 133, 0.55);
+}
+
+.beat-dot.on {
+  background: #61e0c1;
+  box-shadow: 0 0 18px rgba(97, 224, 193, 0.65);
+  transform: scale(1.3);
+}
+
+.beat-dot.accent.on {
+  background: #f0c985;
+  box-shadow: 0 0 20px rgba(240, 201, 133, 0.75);
+}
+
+.bpm-controls {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, 100%);
+}
+
+.bpm-step {
+  min-width: 52px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 248, 236, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.08);
+  color: #fff8ec;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.bpm-controls input[type='range'] {
+  flex: 1;
+  min-width: 60px;
+  height: 44px;
+  accent-color: #f0c985;
+  background: transparent;
+}
+
+.metro-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.beats-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 248, 236, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.08);
+  overflow: hidden;
+}
+
+.beats-stepper button {
+  width: 46px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #fff8ec;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.beats-stepper span {
+  min-width: 58px;
+  text-align: center;
+  color: #fff8ec;
+  font-weight: 900;
+}
+
+.tap-tempo {
+  min-width: 92px;
+  min-height: 44px;
+  border: 1px solid rgba(240, 201, 133, 0.4);
+  border-radius: 8px;
+  background: rgba(240, 201, 133, 0.12);
+  color: #f0c985;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.metro-toggles {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.metro-toggles button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 248, 236, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.06);
+  color: #bfb6a9;
+  font-weight: 900;
+}
+
+.metro-toggles button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.metro-toggles button.on {
+  border-color: rgba(97, 224, 193, 0.5);
+  background: rgba(97, 224, 193, 0.12);
+  color: #61e0c1;
+}
+
+.metro-flash {
+  position: fixed;
+  /* 상태바(시계·안테나)와 홈 인디케이터 영역은 덮지 않는다. 흰 번쩍임이 흰색
+     상태바 글자를 가려 사라진 것처럼 보이던 문제 해결. */
+  top: env(safe-area-inset-top, 0px);
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: 0;
+  z-index: 60;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .beat-dot {
+    width: 15px;
+    height: 15px;
+  }
+
+  .bpm-step {
+    min-width: 46px;
+  }
+}
+
+.app-version {
+  margin: -8px auto 0;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  color: rgba(244, 239, 231, 0.26);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .needle,
+  .needle::before,
+  .status {
+    transition: none;
   }
 }
