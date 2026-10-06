@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.2 (build 8) — 2026-10-07
+
+- **보안 업데이트**: Capacitor 8.4.0 → 8.5.2 (GHSA-rvm3-566m-v7fv: 내부 HTTP 프록시
+  경로로 외부 콘텐츠가 앱 출처에서 로드될 수 있던 문제, 8.3.5~8.4.2 영향).
+  iOS capacitor-swift-pm 8.5.2 고정. npm audit fix로 tar 7.5.22 등 정리 —
+  critical 3·high 7건 해소, 남은 4건은 빌드 도구 전용(@capacitor/cli 안 uuid/xcode,
+  윈도우 개발 서버 전용 esbuild)
+- **휴대폰 세로 고정**: 아이폰 가로(844×390)에서 미터·바늘이 화면 밖으로 밀리던 문제.
+  아이패드는 네 방향 유지(iPad mini 가로에서도 미터 표시 확인). Android 휴대폰도
+  세로 고정 — targetSdk 36이라 Android 16+ 큰 화면(태블릿)에선 시스템이 고정을 무시
+- 저장소 정리: 7월 작업 전체 커밋, 스크린샷·로컬 설정 폴더는 .gitignore
+
 ## 1.2.1 (build 7) — 2026-07-08
 
 - **화면 항상 켜짐(진짜 해결)**: 웹 wakeLock은 iOS 웹뷰에서 무시됨 →
