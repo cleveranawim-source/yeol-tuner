@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.3 (build 9) — 2026-10-08 (긴급 수정)
+
+- **iOS 27에서 실행 직후 튕기던 문제 수정**: 1.2.2부터 Xcode 27(iOS 27 SDK)로 빌드했는데,
+  이 SDK로 빌드한 앱은 UIScene 생명주기가 없으면 iOS 27이 실행을 거부한다
+  (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` → EXC_BREAKPOINT).
+  iOS 26 이하는 정상이었다. Capacitor 8.5 공식 템플릿대로 UIScene 적용:
+  `SceneDelegate.swift`(CAPBridgeViewController 창 생성 + `SceneDelegateProxy`로 URL 전달),
+  `AppDelegate`의 `configurationForConnecting`, Info.plist `UIApplicationSceneManifest`.
+- 검증(Release 시뮬레이터 빌드): iOS 27 iPhone 18 Pro·iPad mini, iOS 26.5 iPhone 17 Pro
+  모두 실행·마이크 청취 정상, Scene 오류·경고 0건, 웹 화면 1개(이중 로딩 없음),
+  다른 앱 전환 후 복귀도 정상.
+- 교훈: Xcode 메이저 업데이트 후 첫 빌드는 반드시 **새 iOS 시뮬레이터에서 실제로 실행**해 볼 것
+  (1.2.2 때 빌드·설정만 확인하고 실행은 안 해서 놓쳤다).
+
 ## 1.2.2 (build 8) — 2026-10-07
 
 - **보안 업데이트**: Capacitor 8.4.0 → 8.5.2 (GHSA-rvm3-566m-v7fv: 내부 HTTP 프록시
