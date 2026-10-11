@@ -41,7 +41,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-        navigateFallback: '/index.html'
+        navigateFallback: '/index.html',
+        // 앱이 아닌 페이지(테스터 안내·개인정보처리방침)는 앱 화면으로 돌려보내지 않는다.
+        // 예전 서비스 워커는 처음 보는 주소를 모두 index.html로 보내 앱이 떴다.
+        navigateFallbackDenylist: [/^\/tester/, /^\/privacy/]
       }
     })
   ]
