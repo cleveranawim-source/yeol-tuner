@@ -97,6 +97,23 @@ function pluckMissingFundamental(freq, amplitude = 0.25) {
   return out;
 }
 
+// 실제 현처럼 비조화성이 있는 밝은 튕김 소리: k번째 배음 = k·f0·√(1+Bk²),
+// 위 배음일수록 빨리 사라짐. 튕긴 직후(배음이 셀 때)가 가장 어렵다.
+function pluckInharmonic(freq, { B = 0.00012, age = 0.4, amplitude = 0.3 } = {}) {
+  const out = new Float32Array(SIZE);
+  let norm = 0;
+  for (let k = 1; k <= 24; k += 1) {
+    const f = freq * k * Math.sqrt(1 + B * k * k);
+    if (f > SAMPLE_RATE * 0.42) break;
+    const amp = (Math.abs(Math.sin(k * Math.PI * 0.18)) / Math.pow(k, 1.1)) * Math.exp(-age * (0.28 * (k - 1)) / 2.2);
+    norm += amp;
+    const phase = k * 1.7;
+    for (let i = 0; i < SIZE; i += 1) out[i] += amp * Math.sin((2 * Math.PI * f * i) / SAMPLE_RATE + phase);
+  }
+  for (let i = 0; i < SIZE; i += 1) out[i] *= amplitude / norm;
+  return out;
+}
+
 function scale(signal, factor) {
   const out = new Float32Array(SIZE);
   for (let i = 0; i < SIZE; i += 1) out[i] = signal[i] * factor;
@@ -227,6 +244,15 @@ for (const [label, freq, range] of STRINGS.filter(([, f]) => f < 150)) {
   check(`no-fund ${label}`, detectPitch(pluckMissingFundamental(freq), SAMPLE_RATE, range.min, range.max), freq, 4);
 }
 
+lines.push('— inharmonic bright pluck (real strings: upper partials run sharp), ±1¢ —');
+let firstStageBiasSum = 0;
+for (const [label, freq, range] of STRINGS) {
+  const signal = pluckInharmonic(freq);
+  check(`inharmonic ${label}`, detectPitch(signal, SAMPLE_RATE, range.min, range.max), freq, 1);
+  const coarse = detectPitch(signal, SAMPLE_RATE, range.min, range.max, { refine: false });
+  if (coarse) firstStageBiasSum += cents(coarse, freq);
+}
+
 lines.push('— rejection cases —');
 expectNull('silence', detectPitch(new Float32Array(SIZE), SAMPLE_RATE, 59, 455));
 expectNull('white noise only', detectPitch(whiteNoise(0.08, 3), SAMPLE_RATE, 59, 455));
@@ -237,5 +263,6 @@ console.log(`\nlegacy detector octave errors on plucked tones: ${legacyOctaveErr
 console.log(`new detector octave errors on plucked tones:    ${newOctaveErrors}/${STRINGS.length}`);
 console.log(`legacy detector misses on quiet inputs: ${legacyQuietMisses}/${STRINGS.length * 2}`);
 console.log(`new detector misses on quiet inputs:    ${newQuietMisses}/${STRINGS.length * 2}`);
+console.log(`inharmonic pluck mean bias without 2nd stage: ${(firstStageBiasSum / STRINGS.length).toFixed(2)}¢`);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

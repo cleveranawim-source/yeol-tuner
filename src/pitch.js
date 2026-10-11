@@ -127,5 +127,91 @@ export function detectPitch(buffer, sampleRate, minFrequency, maxFrequency, opti
 
   const frequency = rate / (tau + shift);
   if (!Number.isFinite(frequency) || frequency < minFreq || frequency > maxFreq) return null;
-  return frequency;
+  if (options.refine === false) return frequency;
+  // 2단계: 찾은 주기 근처만, 기본음 위주로 다시 잰다 (원본 버퍼·원래 샘플레이트 사용).
+  const refined = refinePitch(buffer, sampleRate, frequency);
+  return refined >= minFreq && refined <= maxFreq ? refined : frequency;
+}
+
+// 실제 현은 비조화성 때문에 위 배음일수록 조금씩 높다(k번째 배음 ≈ k·f0·√(1+Bk²)).
+// YIN은 모든 배음을 함께 보고 주기를 정하므로, 배음이 센 튕긴 직후엔 3~7센트,
+// 울림이 이어지는 동안에도 1센트쯤 높게 읽는다(1.3.0 실측). 그래서 1단계가 찾은
+// 주기 근처(±2.5%)만, 기본음의 2.2배에서 자른 4차 저역통과 신호로 다시 재
+// 기본음 기준 값을 얻는다. 옥타브 판단은 1단계 것을 그대로 쓰고 바꾸지 않는다.
+export function refinePitch(buffer, sampleRate, coarse) {
+  const size = buffer.length;
+  const period = sampleRate / coarse;
+  const lagMin = Math.floor(period * 0.975);
+  const lagMax = Math.ceil(period * 1.025);
+  // 필터가 자리 잡는 시간(차단 주파수 2주기)과 비교할 한 주기가 버퍼에 다 들어가야 한다.
+  // 5현 베이스 B0(주기 1555샘플)처럼 그게 안 되면 차단 주파수를 올려 자리 잡는 시간을 줄인다.
+  const room = size - lagMax - 1 - Math.ceil(period);
+  if (room <= 0) return coarse;
+  const cutoff = Math.min(Math.max(coarse * 2.2, (2 * sampleRate) / room), coarse * 4, sampleRate * 0.45);
+  const w0 = (2 * Math.PI * cutoff) / sampleRate;
+  const cos = Math.cos(w0);
+  const sin = Math.sin(w0);
+  let filtered = buffer;
+  // 버터워스 4차 = 바이쿼드 2단(Q 0.5412, 1.3066)
+  for (const q of [0.5412, 1.3066]) {
+    const alpha = sin / (2 * q);
+    const a0 = 1 + alpha;
+    const b0 = (1 - cos) / 2 / a0;
+    const b1 = (1 - cos) / a0;
+    const a1 = (-2 * cos) / a0;
+    const a2 = (1 - alpha) / a0;
+    const out = new Float32Array(size);
+    let x1 = 0;
+    let x2 = 0;
+    let y1 = 0;
+    let y2 = 0;
+    for (let i = 0; i < size; i += 1) {
+      const x0 = filtered[i];
+      const y0 = b0 * x0 + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2;
+      out[i] = y0;
+      x2 = x1;
+      x1 = x0;
+      y2 = y1;
+      y1 = y0;
+    }
+    filtered = out;
+  }
+
+  // 필터가 자리 잡는 앞부분은 건너뛴다.
+  const start = Math.min(Math.ceil((2 * sampleRate) / cutoff), room);
+  const window = Math.min(size - start - lagMax - 1, 2048);
+  if (window < period || lagMax - lagMin < 2) return coarse;
+
+  // 정규화 상호상관: 소리가 줄어드는(감쇠) 것에 흔들리지 않는다.
+  const correlations = new Float32Array(lagMax - lagMin + 1);
+  let bestIndex = -1;
+  let best = -Infinity;
+  for (let lag = lagMin; lag <= lagMax; lag += 1) {
+    let xy = 0;
+    let xx = 0;
+    let yy = 0;
+    for (let i = start; i < start + window; i += 1) {
+      const a = filtered[i];
+      const b = filtered[i + lag];
+      xy += a * b;
+      xx += a * a;
+      yy += b * b;
+    }
+    const value = xx > 0 && yy > 0 ? xy / Math.sqrt(xx * yy) : 0;
+    correlations[lag - lagMin] = value;
+    if (value > best) {
+      best = value;
+      bestIndex = lag - lagMin;
+    }
+  }
+  // 범위 끝에 걸리거나 주기성이 약하면(잡음) 1단계 값을 쓴다.
+  if (bestIndex <= 0 || bestIndex >= correlations.length - 1 || best < 0.5) return coarse;
+
+  const left = correlations[bestIndex - 1];
+  const right = correlations[bestIndex + 1];
+  const denom = left + right - 2 * best;
+  const shift = denom !== 0 ? (left - right) / (2 * denom) : 0;
+  if (!Number.isFinite(shift) || Math.abs(shift) > 1) return coarse;
+  const refined = sampleRate / (lagMin + bestIndex + shift);
+  return Math.abs(1200 * Math.log2(refined / coarse)) <= 30 ? refined : coarse;
 }

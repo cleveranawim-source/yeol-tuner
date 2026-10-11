@@ -1,3 +1,5 @@
+/* YEOL Tuner 1.3 — 한 화면 배치.
+   크기는 화면 높이(vh)에 맞춰 늘고 줄어 휴대폰 한 장에 튜너 전체가 들어간다. */
 :root {
   color: #f4efe7;
   background: #101316;
@@ -32,12 +34,21 @@ button {
 }
 
 .app {
+  --col: 560px;
+  --note-size: clamp(84px, 13vh, 170px);
+  --rail-h: clamp(62px, 8.6vh, 120px);
+  --string-h: clamp(54px, 7.4vh, 84px);
+  --bpm-size: clamp(96px, 15vh, 190px);
+  --art-scale: 0.68;
+  --console-gap: 8px;
   min-height: 100vh;
   min-height: 100dvh;
-  display: grid;
-  grid-template-rows: auto minmax(470px, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   color: #f4efe7;
   background:
@@ -47,33 +58,37 @@ button {
     linear-gradient(145deg, #101316 0%, #181714 42%, #0e1416 100%);
 }
 
-.topbar {
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto;
-  min-height: 86px;
+.app > :not(.sheet-layer) {
+  width: min(var(--col), calc(100% - 32px));
+  flex-shrink: 0;
+}
+
+/* ---------- 머리줄: 앱 이름 + Tuner/Metronome ---------- */
+.app-header {
+  min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 10px;
+  padding-top: 6px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: max-content;
+  gap: 9px;
+  min-width: 0;
 }
 
 .brand-mark {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
+  flex: none;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 248, 236, 0.12);
-  border-radius: 10px;
+  border: 1px solid rgba(255, 248, 236, 0.14);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
 }
 
 .brand-mark img {
@@ -84,68 +99,32 @@ button {
 }
 
 .brand-name {
-  font-size: 1.08rem;
+  font-size: 1rem;
   font-weight: 900;
   color: #fff8ec;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.select-wrap {
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 248, 236, 0.14);
-  border-radius: 8px;
-  background: rgba(255, 248, 236, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  color: #efe4d1;
-}
-
-.select-wrap svg {
-  width: 17px;
-  height: 17px;
-  color: #f0c985;
-}
-
-select {
-  min-width: 116px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #fff8ec;
-  font-weight: 800;
-}
-
-select option {
-  color: #17201f;
+  white-space: nowrap;
 }
 
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  height: 44px;
+  height: 40px;
   padding: 3px;
   border: 1px solid rgba(255, 248, 236, 0.14);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 248, 236, 0.08);
+  flex: none;
 }
 
 .segmented button {
-  min-width: 76px;
+  padding: 0 13px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: #bfb6a9;
+  font-size: 0.85rem;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .segmented .active {
@@ -153,147 +132,256 @@ select option {
   color: #151414;
 }
 
-.hero {
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  padding: 22px 0 34px;
+/* ---------- 설정 한 줄 ---------- */
+.settings-chip {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 248, 236, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 248, 236, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #fff8ec;
+  font-size: 0.94rem;
+  font-weight: 800;
+  text-align: left;
 }
 
+.settings-chip svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: #f0c985;
+}
+
+.settings-chip .chevron {
+  color: #bfb6a9;
+}
+
+.settings-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-text i {
+  margin: 0 7px;
+  font-style: normal;
+  color: #958b7f;
+}
+
+/* ---------- 튜너 카드 ---------- */
 .tuner-console {
-  width: min(860px, 100%);
   position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 24px;
-  padding: clamp(24px, 5vw, 42px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--console-gap);
+  padding: 14px;
   border: 1px solid rgba(255, 248, 236, 0.12);
-  border-radius: 8px;
+  border-radius: 16px;
   background:
-    linear-gradient(180deg, rgba(255, 248, 236, 0.10), rgba(255, 248, 236, 0.035)),
+    linear-gradient(180deg, rgba(255, 248, 236, 0.09), rgba(255, 248, 236, 0.03)),
     rgba(14, 18, 20, 0.84);
   box-shadow:
-    0 30px 90px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 24px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
 }
 
 .tap-ready .tuner-console {
-  border-color: rgba(240, 201, 133, 0.26);
+  border-color: rgba(240, 201, 133, 0.32);
+}
+
+/* 맞았을 때: 카드 전체가 초록빛으로 밝아져 멀리서도 보인다. */
+.tuner-console.good {
+  border-color: rgba(97, 224, 193, 0.6);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(97, 224, 193, 0.2), transparent 62%),
+    linear-gradient(180deg, rgba(97, 224, 193, 0.08), rgba(255, 248, 236, 0.03)),
+    rgba(14, 22, 21, 0.9);
   box-shadow:
-    0 30px 90px rgba(0, 0, 0, 0.42),
-    0 0 0 1px rgba(240, 201, 133, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0 0 1px rgba(97, 224, 193, 0.22),
+    0 0 60px rgba(97, 224, 193, 0.2),
+    0 24px 60px rgba(0, 0, 0, 0.4);
 }
 
-.tuner-console::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border: 1px solid rgba(240, 201, 133, 0.12);
-  border-radius: 6px;
-  pointer-events: none;
-}
-
-.readout {
-  position: relative;
-  z-index: 1;
-  min-height: 178px;
-  display: grid;
-  align-content: center;
-  justify-items: center;
+.console-top {
+  width: 100%;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  text-align: center;
 }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   color: #f0c985;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-h1 {
-  margin: 0;
-  font-size: clamp(6.5rem, 17vw, 12rem);
-  line-height: 0.82;
-  letter-spacing: 0;
-  color: #fff8ec;
-  text-shadow: 0 16px 44px rgba(0, 0, 0, 0.45);
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #61e0c1;
+  box-shadow: 0 0 10px rgba(97, 224, 193, 0.9);
 }
 
-.status {
+.live-dot.gold {
+  background: #f0c985;
+  box-shadow: 0 0 10px rgba(240, 201, 133, 0.9);
+}
+
+.mode-chips {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.mode-chip {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(97, 224, 193, 0.45);
+  border-radius: 999px;
+  background: rgba(97, 224, 193, 0.08);
+  color: #61e0c1;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mode-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mode-chip.manual {
+  border-color: rgba(240, 201, 133, 0.7);
+  background: rgba(240, 201, 133, 0.1);
+  color: #f0c985;
+  text-transform: none;
+}
+
+button.mode-chip.ghost {
+  min-height: 32px;
+  border-color: rgba(255, 248, 236, 0.22);
+  background: transparent;
+  color: #bfb6a9;
+  text-transform: none;
+}
+
+.complete-banner {
+  margin: 0 auto;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(97, 224, 193, 0.5);
+  border-radius: 999px;
+  background: rgba(97, 224, 193, 0.18);
+  color: #8ff0d6;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.complete-banner svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+.note-name {
+  margin: 2px 0 0;
+  font-size: var(--note-size);
+  font-weight: 900;
+  line-height: 0.84;
+  letter-spacing: -0.02em;
+  color: #fff8ec;
+  text-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+
+.tuner-console.good .note-name {
+  color: #f0fffa;
+  text-shadow: 0 0 34px rgba(97, 224, 193, 0.55), 0 14px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 안내는 한 문장: ♭ 줄을 조금 조여요 / ✓ 정확해요 */
+.guide {
   margin: 0;
   min-height: 38px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
   padding: 0 16px;
-  border: 1px solid rgba(223, 94, 68, 0.30);
-  border-radius: 8px;
-  background: rgba(223, 94, 68, 0.12);
-  color: #ff8d73;
-  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  border: 1px solid rgba(240, 201, 133, 0.26);
+  border-radius: 11px;
+  background: rgba(240, 201, 133, 0.10);
+  color: #d9c29a;
+  font-size: 1.15rem;
   font-weight: 900;
   transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
-.status.idle {
-  border-color: rgba(240, 201, 133, 0.26);
-  background: rgba(240, 201, 133, 0.10);
-  color: #d9c29a;
+.guide-mark {
+  display: inline-flex;
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
-.status.flat,
-.status.sharp {
-  border-color: rgba(240, 201, 133, 0.30);
-  background: rgba(240, 201, 133, 0.12);
-  color: #f4d391;
+.guide-mark svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 3;
 }
 
-.status.good {
-  border-color: rgba(53, 196, 163, 0.34);
-  background: rgba(53, 196, 163, 0.12);
+.guide.flat {
+  border-color: rgba(100, 193, 221, 0.32);
+  background: rgba(100, 193, 221, 0.12);
+  color: #8fe0f4;
+}
+
+.guide.sharp {
+  border-color: rgba(255, 147, 111, 0.32);
+  background: rgba(255, 147, 111, 0.12);
+  color: #ffb083;
+}
+
+.guide.good {
+  border-color: rgba(97, 224, 193, 0.45);
+  background: rgba(97, 224, 193, 0.16);
   color: #61e0c1;
 }
 
+/* ---------- 악기 그림 (1.2 그림을 그대로, 전체를 축소) ---------- */
 .instrument-visual {
-  position: relative;
-  z-index: 1;
-  width: min(430px, 100%);
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-  margin: -6px 0 0;
-}
-
-.instrument-label {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 8px;
-  color: #9b9184;
-  font-size: 0.76rem;
-  font-weight: 900;
 }
 
-.instrument-label strong {
-  min-width: 42px;
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(97, 224, 193, 0.36);
-  border-radius: 999px;
-  background: rgba(97, 224, 193, 0.12);
-  color: #fff8ec;
-  font-size: 0.9rem;
-  box-shadow: 0 0 24px rgba(97, 224, 193, 0.10);
+.art-stage {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 320px;
+  height: 116px;
+  transform: translateX(-50%) scale(var(--art-scale, 1));
+  transform-origin: top center;
 }
 
 .instrument-art {
@@ -302,7 +390,7 @@ h1 {
   --wood-3: #d28a51;
   position: relative;
   width: 100%;
-  height: 116px;
+  height: calc(116px * var(--art-scale, 1));
   overflow: hidden;
   border: 1px solid rgba(255, 248, 236, 0.10);
   border-radius: 8px;
@@ -606,20 +694,20 @@ h1 {
   box-shadow: 34px 0 0 rgba(17, 11, 9, 0.52);
 }
 
+/* ---------- 미터: 평소엔 차분한 색, 벗어난 쪽만 색칠 ---------- */
 .meter {
-  position: relative;
-  z-index: 1;
-  width: min(720px, 100%);
+  --meter-edge: 14px;
+  width: 100%;
   display: grid;
-  gap: 12px;
-  --meter-edge: 20px;
+  gap: 5px;
 }
 
 .meter-scale {
   position: relative;
-  height: 18px;
+  height: 14px;
+  margin: 0 var(--meter-edge);
   color: #958b7f;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 900;
 }
 
@@ -627,63 +715,94 @@ h1 {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  text-align: center;
 }
 
-.meter-scale span:nth-child(1) {
-  left: var(--meter-edge);
-}
-
-.meter-scale span:nth-child(2) {
-  left: calc(25% + (var(--meter-edge) / 2));
-}
-
-.meter-scale span:nth-child(3) {
-  left: 50%;
-  color: #f0c985;
-}
-
-.meter-scale span:nth-child(4) {
-  left: calc(75% - (var(--meter-edge) / 2));
-}
-
-.meter-scale span:nth-child(5) {
-  left: calc(100% - var(--meter-edge));
-}
+.meter-scale span:nth-child(1) { left: 0; }
+.meter-scale span:nth-child(2) { left: 25%; }
+.meter-scale span:nth-child(3) { left: 50%; color: #f0c985; }
+.meter-scale span:nth-child(4) { left: 75%; }
+.meter-scale span:nth-child(5) { left: 100%; }
 
 .rail {
   position: relative;
-  height: 106px;
-  border: 1px solid rgba(255, 248, 236, 0.13);
-  border-radius: 8px;
+  height: var(--rail-h);
   overflow: hidden;
-  background:
-    linear-gradient(90deg, rgba(191, 55, 42, 0.95) 0 16%, rgba(207, 131, 55, 0.95) 30%, rgba(42, 169, 139, 0.95) 49%, rgba(42, 169, 139, 0.95) 51%, rgba(207, 131, 55, 0.95) 70%, rgba(191, 55, 42, 0.95) 100%);
-  box-shadow:
-    inset 0 0 0 12px rgba(12, 15, 17, 0.32),
-    0 18px 36px rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 248, 236, 0.13);
+  border-radius: 12px;
+  background: rgba(255, 248, 236, 0.05);
+  transition: border-color 220ms ease, background 220ms ease;
 }
 
-.rail::before {
-  content: "";
+.tuner-console.good .rail {
+  border-color: rgba(97, 224, 193, 0.5);
+  background: rgba(97, 224, 193, 0.07);
+}
+
+/* 눈금은 배경 그림 한 장(요소 수를 늘리지 않는다): 25센트마다 긴 눈금, 5센트마다 짧은 눈금. */
+.rail-track {
+  --tick-major: rgba(255, 248, 236, 0.30);
+  --tick-minor: rgba(255, 248, 236, 0.16);
   position: absolute;
-  inset: 20px;
+  top: 0;
+  bottom: 0;
+  left: var(--meter-edge);
+  right: var(--meter-edge);
+  background:
+    linear-gradient(90deg, var(--tick-major) 0 1.5px, transparent 1.5px 100%) 0 7px / 25% 14px repeat-x,
+    linear-gradient(90deg, var(--tick-major) 0 1.5px, transparent 1.5px 100%) 0 calc(100% - 7px) / 25% 14px repeat-x,
+    linear-gradient(var(--tick-major), var(--tick-major)) 100% 7px / 1.5px 14px no-repeat,
+    linear-gradient(var(--tick-major), var(--tick-major)) 100% calc(100% - 7px) / 1.5px 14px no-repeat,
+    linear-gradient(90deg, var(--tick-minor) 0 1.5px, transparent 1.5px 100%) 0 7px / 5% 8px repeat-x,
+    linear-gradient(90deg, var(--tick-minor) 0 1.5px, transparent 1.5px 100%) 0 calc(100% - 7px) / 5% 8px repeat-x;
+}
+
+/* ±4센트(정확해요 범위) */
+.in-tune-zone {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 46%;
+  width: 8%;
+  border: 1px solid rgba(97, 224, 193, 0.35);
   border-radius: 6px;
-  background:
-    repeating-linear-gradient(90deg, rgba(15, 19, 21, 0.16) 0 1px, transparent 1px 48px),
-    rgba(255, 248, 236, 0.76);
+  background: rgba(97, 224, 193, 0.13);
+  transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
-.center-line {
+.tuner-console.good .in-tune-zone {
+  border-color: rgba(143, 240, 214, 0.8);
+  background: rgba(97, 224, 193, 0.32);
+  box-shadow: 0 0 26px rgba(97, 224, 193, 0.55);
+}
+
+/* 가운데에서 바늘까지 칠하는 띠. 폭 대신 scaleX만 바꿔 GPU 합성만 일어나게 한다(발열). */
+.rail-fill {
   position: absolute;
-  top: 7px;
-  bottom: 7px;
+  top: 40%;
+  bottom: 40%;
+  width: 50%;
+  border-radius: 6px;
+  opacity: 0;
+  transform: scaleX(var(--fill-scale, 0));
+  transition: transform 200ms cubic-bezier(0.25, 0.6, 0.3, 1), opacity 160ms ease;
+  will-change: transform;
+}
+
+.rail-fill.flat {
+  right: 50%;
+  transform-origin: right center;
+  background: linear-gradient(90deg, rgba(100, 193, 221, 0.8), rgba(100, 193, 221, 0.15));
+}
+
+.rail-fill.sharp {
   left: 50%;
-  width: 4px;
-  transform: translateX(-50%);
-  border-radius: 99px;
-  background: #fff8ec;
-  box-shadow: 0 0 20px rgba(97, 224, 193, 0.85);
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(255, 147, 111, 0.15), rgba(255, 147, 111, 0.8));
+}
+
+.rail-track.flat .rail-fill.flat,
+.rail-track.sharp .rail-fill.sharp {
+  opacity: 1;
 }
 
 /* 니들은 트랙 전체 폭을 차지하는 레이어이고, 위치는 transform으로만 바꾼다.
@@ -692,25 +811,24 @@ h1 {
    GPU 합성만 일어나 리페인트가 사라진다 (발열 핵심 수정). */
 .needle {
   position: absolute;
+  top: 8px;
+  bottom: 8px;
   left: 0;
   right: 0;
-  bottom: 13px;
-  height: 80px;
-  --needle-h: 80px;
   pointer-events: none;
   transform: translateX(calc(var(--needle-position, 50%) - 50%));
   /* 갱신 간격(70ms+)보다 길게 잡아 스텝이 아닌 연속 활강으로 보이게 한다. */
-  transition: transform 200ms cubic-bezier(0.25, 0.6, 0.3, 1);
+  transition: transform 200ms cubic-bezier(0.25, 0.6, 0.3, 1), opacity 200ms ease;
   will-change: transform;
 }
 
 .needle::before {
   content: "";
   position: absolute;
-  left: 50%;
+  top: 0;
   bottom: 0;
+  left: 50%;
   width: 8px;
-  height: var(--needle-h);
   transform: translateX(-50%);
   border-radius: 99px;
   background: linear-gradient(180deg, #fff1c7 0%, #f0c985 45%, #c98245 100%);
@@ -721,649 +839,594 @@ h1 {
   transition: background 180ms ease, box-shadow 180ms ease;
 }
 
+.needle.idle {
+  opacity: 0.35;
+}
+
 .needle.good::before {
   background: linear-gradient(180deg, #d9fff2 0%, #61e0c1 45%, #2aa98b 100%);
   box-shadow:
     0 0 0 2px rgba(217, 255, 242, 0.78),
-    0 0 26px rgba(97, 224, 193, 0.72),
+    0 0 26px rgba(97, 224, 193, 0.8),
     0 5px 18px rgba(0, 0, 0, 0.40);
-}
-
-.needle-track {
-  position: absolute;
-  inset: 0 var(--meter-edge);
-  pointer-events: none;
 }
 
 .cents {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cents span {
-  min-width: 72px;
-  color: #fff8ec;
-  font-size: 2rem;
+  min-width: 3ch;
+  color: #958b7f;
+  font-size: 2.1rem;
   font-weight: 950;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
+.cents.flat span { color: #8fe0f4; }
+.cents.sharp span { color: #ffb083; }
+.cents.good span { color: #61e0c1; }
+
 .cents small {
   color: #958b7f;
+  font-size: 0.75rem;
   font-weight: 900;
 }
 
-.action-guide {
-  min-height: 50px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 11px;
-  row-gap: 1px;
-  width: min(430px, 100%);
-  margin: 0 auto;
-  padding: 9px 13px;
-  border: 1px solid rgba(255, 248, 236, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 248, 236, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.action-guide strong {
-  grid-row: 1 / 3;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 248, 236, 0.10);
-  color: #f0c985;
-  font-size: 1.15rem;
-  font-weight: 950;
-}
-
-.action-guide span {
-  color: #fff8ec;
-  font-size: 0.95rem;
-  font-weight: 950;
-}
-
-.action-guide small {
-  color: #9b9184;
-  font-size: 0.76rem;
-  font-weight: 850;
-}
-
-.action-guide.good {
-  border-color: rgba(97, 224, 193, 0.28);
-  background: rgba(97, 224, 193, 0.08);
-}
-
-.action-guide.good strong {
-  background: rgba(97, 224, 193, 0.18);
-  color: #61e0c1;
-}
-
-.action-guide.flat strong {
-  background: rgba(100, 193, 221, 0.14);
-  color: #8fe0f4;
-}
-
-.action-guide.sharp strong {
-  background: rgba(255, 147, 111, 0.14);
-  color: #ffb083;
-}
-
-.actions {
-  position: relative;
-  z-index: 1;
+.detail-line {
+  margin: 0;
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 4px 12px;
+  color: #958b7f;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
-.mic,
-.icon-button {
-  border: 0;
-  min-height: 44px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-weight: 950;
-}
-
-.mic {
-  min-width: 116px;
-  padding: 0 15px;
-  background: linear-gradient(180deg, #f0c985, #d99b56);
-  color: #161616;
-  box-shadow: 0 14px 30px rgba(240, 201, 133, 0.20);
-}
-
-.mic.live {
-  background: linear-gradient(180deg, #ff7a5f, #c94737);
-  color: #fff8ec;
-}
-
-.icon-button {
-  width: 44px;
-  border: 1px solid rgba(255, 248, 236, 0.16);
-  background: rgba(255, 248, 236, 0.10);
-  color: #fff8ec;
-}
-
-.mic svg,
-.icon-button svg {
-  width: 16px;
-  height: 16px;
+.detail-line em {
+  color: #d7c5aa;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 .error {
-  position: relative;
-  z-index: 1;
-  margin: -8px 0 0;
+  margin: 0;
   color: #ff9a82;
+  font-size: 0.85rem;
   font-weight: 850;
   text-align: center;
 }
 
-.strings {
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto 24px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+.flex-spacer {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
-.strings button {
-  position: relative;
-  min-height: 112px;
+/* ---------- 줄 버튼: 엄지가 닿는 아래쪽 ---------- */
+.strings {
   display: grid;
-  grid-template-rows: auto auto auto;
-  align-content: center;
-  justify-items: center;
-  gap: 3px;
-  overflow: hidden;
+  gap: 6px;
+}
+
+.strings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+  color: #958b7f;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.strings-progress {
+  color: #61e0c1;
+  white-space: nowrap;
+}
+
+.strings-row {
+  display: grid;
+  grid-template-columns: repeat(var(--string-count), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.string-button {
+  position: relative;
+  height: var(--string-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0;
   border: 1px solid rgba(255, 248, 236, 0.12);
-  border-radius: 8px;
+  border-radius: 11px;
   background:
-    linear-gradient(180deg, rgba(255, 248, 236, 0.10), rgba(255, 248, 236, 0.035)),
+    linear-gradient(180deg, rgba(255, 248, 236, 0.09), rgba(255, 248, 236, 0.03)),
     #161b1d;
   color: #fff8ec;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.strings button::before {
-  content: "";
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 14px;
-  height: 2px;
-  border-radius: 99px;
-  background: linear-gradient(90deg, transparent, rgba(240, 201, 133, 0.68), transparent);
-}
-
-.strings strong {
-  position: relative;
-  color: #d7c5aa;
-  font-size: 1.02rem;
-  font-weight: 950;
-}
-
-.strings span {
-  position: relative;
-  color: #fff8ec;
-  font-size: 2.05rem;
-  font-weight: 950;
-}
-
-.strings small {
-  position: relative;
-  color: #91887b;
+.string-button small {
+  color: #9b9184;
+  font-size: 0.66rem;
   font-weight: 900;
 }
 
-.strings .selected,
-.strings .current {
-  border-color: rgba(97, 224, 193, 0.74);
-  background:
-    linear-gradient(180deg, rgba(97, 224, 193, 0.18), rgba(255, 248, 236, 0.04)),
-    #121b1b;
-  box-shadow:
-    inset 0 0 0 2px rgba(97, 224, 193, 0.32),
-    0 16px 34px rgba(42, 169, 139, 0.12);
+.string-button strong {
+  font-size: 1.2rem;
+  font-weight: 950;
 }
 
-.details {
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto 18px;
+.string-button.current {
+  border-color: rgba(97, 224, 193, 0.75);
+  background:
+    linear-gradient(180deg, rgba(97, 224, 193, 0.2), rgba(255, 248, 236, 0.03)),
+    #121b1b;
+  box-shadow: inset 0 0 0 1.5px rgba(97, 224, 193, 0.3);
+}
+
+.string-button.selected {
+  border-color: rgba(240, 201, 133, 0.85);
+  background:
+    linear-gradient(180deg, rgba(240, 201, 133, 0.18), rgba(255, 248, 236, 0.03)),
+    #1a1814;
+  box-shadow: inset 0 0 0 1.5px rgba(240, 201, 133, 0.3);
+}
+
+.string-done {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 15px;
+  height: 15px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  place-items: center;
+  border-radius: 50%;
+  background: #2aa98b;
+  color: #07120f;
+}
+
+.string-done svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 3.6;
+}
+
+.string-lock {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: flex;
+  color: #f0c985;
+}
+
+.string-lock svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.6;
+}
+
+/* ---------- 아래 줄: 입력 레벨 + 마이크 ---------- */
+.bottom-bar {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.details div {
-  min-height: 78px;
-  display: grid;
-  align-content: center;
-  gap: 5px;
-  padding: 13px 15px;
-  border: 1px solid rgba(255, 248, 236, 0.10);
-  border-radius: 8px;
-  background: rgba(255, 248, 236, 0.055);
-}
-
-.details span {
-  color: #91887b;
-  font-size: 0.78rem;
+.input-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #958b7f;
+  font-size: 0.75rem;
   font-weight: 900;
 }
 
-.details strong {
-  color: #fff8ec;
-  font-size: 1.08rem;
+.input-level > svg {
+  width: 16px;
+  height: 16px;
+  color: #61e0c1;
 }
 
-.level {
+.level-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+
+.level-bars i {
+  width: 4px;
+  border-radius: 2px;
+  background: rgba(255, 248, 236, 0.18);
+}
+
+.level-bars i:nth-child(1) { height: 6px; }
+.level-bars i:nth-child(2) { height: 9px; }
+.level-bars i:nth-child(3) { height: 12px; }
+.level-bars i:nth-child(4) { height: 15px; }
+.level-bars i:nth-child(5) { height: 18px; }
+
+.level-bars i.on {
+  background: #61e0c1;
+}
+
+.mic-button {
+  min-height: 42px;
   display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f0c985, #d99b56);
+  color: #161616;
+  font-size: 0.85rem;
+  font-weight: 900;
+  box-shadow: 0 12px 26px rgba(240, 201, 133, 0.2);
+}
+
+.mic-button.live {
+  border-color: rgba(255, 122, 95, 0.45);
+  background: rgba(255, 122, 95, 0.10);
+  color: #ff9a82;
+  box-shadow: none;
+}
+
+.mic-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- 설정 창 (아래에서 올라옴) ---------- */
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 7, 0.62);
+  animation: sheet-fade 180ms ease;
+}
+
+.sheet {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255, 248, 236, 0.16);
+  border-radius: 24px 24px 0 0;
+  background: linear-gradient(180deg, #23221f, #191b1c);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
+  animation: sheet-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  margin: 0 auto 10px;
+  border-radius: 3px;
+  background: rgba(255, 248, 236, 0.28);
+}
+
+.sheet-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-title h2 {
+  margin: 0;
+  color: #fff8ec;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.sheet-done {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: #f0c985;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.sheet-label {
+  margin: 16px 2px 8px;
+  color: #958b7f;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.instrument-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.instrument-grid button {
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 248, 236, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 248, 236, 0.05);
+  color: #fff8ec;
+  text-align: left;
+}
+
+.instrument-grid strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.instrument-grid small {
+  display: block;
+  color: #958b7f;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.instrument-grid code {
+  color: #d7c5aa;
+  font: 800 0.64rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.instrument-grid button.on {
+  border-color: rgba(240, 201, 133, 0.85);
+  background: rgba(240, 201, 133, 0.12);
+  box-shadow: inset 0 0 0 1.5px rgba(240, 201, 133, 0.25);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
-.level svg {
-  width: 18px;
-  height: 18px;
-  color: #61e0c1;
+.chip {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 248, 236, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 248, 236, 0.07);
+  color: #bfb6a9;
+  font-size: 0.9rem;
+  font-weight: 900;
 }
 
-@media (max-width: 780px) {
-  .app {
-    grid-template-rows: auto minmax(420px, auto) auto auto;
-  }
-
-  .topbar {
-    align-items: center;
-    flex-direction: column;
-    padding: 20px 0 10px;
-  }
-
-  .brand {
-    align-self: center;
-    justify-content: center;
-  }
-
-  .controls {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .select-wrap,
-  .segmented {
-    flex: 1 1 160px;
-  }
-
-  .strings {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
-
-  .details {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.chip.on {
+  border-color: #f0c985;
+  background: #f0c985;
+  color: #151414;
 }
 
-@media (max-width: 480px) {
-  .app {
-    grid-template-rows: auto minmax(390px, auto) auto auto;
-  }
-
-  .topbar,
-  .hero,
-  .strings,
-  .details {
-    width: min(100% - 20px, 1180px);
-  }
-
-  .topbar {
-    min-height: auto;
-    gap: 12px;
-    /* 안전영역 패딩은 .app이 이미 적용하므로 여기서 또 더하지 않는다 (이중 여백 버그 수정) */
-    padding-top: 10px;
-  }
-
-  .hero {
-    padding-top: 4px;
-  }
-
-  .tuner-console {
-    gap: 12px;
-    padding: 18px 14px;
-  }
-
-  .tuner-console::before {
-    inset: 8px;
-  }
-
-  .readout {
-    min-height: 124px;
-  }
-
-  h1 {
-    font-size: clamp(5.2rem, 28vw, 7.4rem);
-  }
-
-  .status {
-    min-height: 34px;
-    padding: 0 12px;
-  }
-
-  .instrument-visual {
-    width: min(320px, 100%);
-    gap: 5px;
-    margin: -4px 0 0;
-  }
-
-  .instrument-label {
-    padding: 0 4px;
-    font-size: 0.68rem;
-  }
-
-  .instrument-label strong {
-    min-width: 36px;
-    min-height: 25px;
-    font-size: 0.78rem;
-  }
-
-  .instrument-art {
-    height: 82px;
-  }
-
-  .instrument-art::before {
-    inset: 9px 14px;
-  }
-
-  .head {
-    top: 5px;
-    transform: translateX(-50%) scale(0.74);
-    transform-origin: top center;
-  }
-
-  .neck {
-    top: 27px;
-    height: 58px;
-    transform: translateX(-50%) scale(0.82);
-    transform-origin: top center;
-  }
-
-  .body {
-    bottom: -55px;
-    transform: translateX(-50%) scale(0.76);
-    transform-origin: top center;
-  }
-
-  .instrument-visual.bowed .head {
-    top: 4px;
-  }
-
-  .instrument-visual.bowed .neck {
-    top: 30px;
-    height: 57px;
-  }
-
-  .instrument-visual.bowed .body {
-    bottom: -64px;
-  }
-
-  .instrument-visual.violin .body {
-    bottom: -58px;
-  }
-
-  .instrument-visual.viola .body {
-    bottom: -60px;
-  }
-
-  .instrument-visual.cello .neck {
-    top: 29px;
-    height: 61px;
-  }
-
-  .instrument-visual.cello .body {
-    bottom: -72px;
-  }
-
-  .instrument-visual.doubleBass .neck {
-    top: 29px;
-    height: 62px;
-  }
-
-  .instrument-visual.doubleBass .body {
-    bottom: -76px;
-  }
-
-  .rail {
-    height: 78px;
-  }
-
-  .meter {
-    --meter-edge: 16px;
-  }
-
-  .rail::before {
-    inset: 16px;
-  }
-
-  .needle {
-    height: 56px;
-    --needle-h: 56px;
-  }
-
-  .cents span {
-    min-width: 56px;
-    font-size: 1.7rem;
-  }
-
-  .action-guide {
-    min-height: 44px;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: 9px;
-    padding: 8px 10px;
-  }
-
-  .action-guide strong {
-    width: 30px;
-    height: 30px;
-    font-size: 1rem;
-  }
-
-  .action-guide span {
-    font-size: 0.83rem;
-    line-height: 1.1;
-  }
-
-  .action-guide small {
-    font-size: 0.68rem;
-    line-height: 1.1;
-  }
-
-  .actions {
-    gap: 8px;
-  }
-
-  .mic,
-  .icon-button {
-    min-height: 44px;
-    gap: 6px;
-    font-size: 0.84rem;
-  }
-
-  .mic {
-    padding: 0 14px;
-    min-width: 104px;
-  }
-
-  .icon-button {
-    width: 44px;
-  }
-
-  .mic svg,
-  .icon-button svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  .strings {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .strings button {
-    min-height: 86px;
-    padding: 14px 8px 10px;
-    gap: 1px;
-  }
-
-  .strings button::before {
-    left: 18px;
-    right: 18px;
-    top: 12px;
-    height: 1px;
-    opacity: 0.68;
-  }
-
-  .strings strong {
-    font-size: 0.78rem;
-    line-height: 1;
-  }
-
-  .strings span {
-    font-size: clamp(2rem, 12vw, 2.7rem);
-    line-height: 1;
-  }
-
-  .strings small {
-    font-size: 0.82rem;
-    line-height: 1.1;
-  }
-
-  .details {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .details div {
-    min-height: 58px;
-    padding: 8px 6px;
-    gap: 2px;
-  }
-
-  .details span {
-    font-size: 0.66rem;
-    line-height: 1.05;
-    white-space: nowrap;
-  }
-
-  .details strong {
-    font-size: clamp(0.76rem, 3.2vw, 0.9rem);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
-  .level {
-    gap: 4px;
-  }
-
-  .level svg {
-    width: 14px;
-    height: 14px;
-  }
-}
-
-.segmented button {
+.stepper {
+  height: 44px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
+  overflow: hidden;
+  border: 1px solid rgba(255, 248, 236, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 248, 236, 0.07);
 }
 
-.segmented button svg {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
+.stepper button {
+  width: 44px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: #fff8ec;
+  font-size: 1.15rem;
+  font-weight: 900;
 }
 
-.view-switch button {
-  padding: 0 12px;
-  font-size: 0.95rem;
+.stepper button:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
-/* 모드 전환은 최상위 컨트롤: 좁은 화면에서는 한 줄을 통째로 차지해
-   Tuner/Metronome 라벨이 상자 밖으로 넘치지 않게 한다. */
-@media (max-width: 780px) {
-  .segmented.view-switch {
-    flex: 1 1 100%;
-  }
+.stepper strong {
+  min-width: 82px;
+  color: #fff8ec;
+  font-weight: 900;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
+.sheet-hint {
+  margin: 8px 2px 0;
+  color: #958b7f;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.toggle-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 248, 236, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 248, 236, 0.05);
+  color: #fff8ec;
+  text-align: left;
+}
+
+.toggle-row > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: #f0c985;
+}
+
+.toggle-row > span:not(.switch) {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.toggle-row strong {
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.toggle-row small {
+  color: #958b7f;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.switch {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  flex: none;
+  border-radius: 999px;
+  background: rgba(255, 248, 236, 0.18);
+  transition: background 180ms ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff8ec;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 180ms ease;
+}
+
+.switch.on {
+  background: #2aa98b;
+}
+
+.switch.on::after {
+  transform: translateX(20px);
+}
+
+.sheet-version {
+  margin: 20px 0 0;
+  color: rgba(244, 239, 231, 0.3);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+/* ---------- 메트로놈 ---------- */
 .metronome-console {
-  gap: 20px;
+  gap: 16px;
+  padding: 18px 16px 22px;
 }
 
-.metronome-console .readout {
-  min-height: 150px;
+.bpm-readout {
+  margin-top: 4px;
+  color: #fff8ec;
+  font-size: var(--bpm-size);
+  font-weight: 900;
+  line-height: 0.84;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tempo-name {
+  margin: 0;
+  color: #d9c29a;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.tempo-name span {
+  color: #958b7f;
+  font-weight: 800;
 }
 
 .beat-dots {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 14px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--beat-count), minmax(0, 54px));
   justify-content: center;
-  align-items: center;
-  min-height: 30px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .beat-dot {
-  width: 18px;
-  height: 18px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(255, 248, 236, 0.22);
   border-radius: 50%;
-  border: 1px solid rgba(255, 248, 236, 0.22);
-  background: rgba(255, 248, 236, 0.12);
+  background: rgba(255, 248, 236, 0.07);
+  color: #958b7f;
+  font-size: 0.95rem;
+  font-weight: 900;
   transition: transform 90ms ease, background 90ms ease, box-shadow 90ms ease;
 }
 
 .beat-dot.accent {
-  border-color: rgba(240, 201, 133, 0.55);
+  border-color: rgba(240, 201, 133, 0.75);
+  color: #f0c985;
 }
 
 .beat-dot.on {
+  border-color: #61e0c1;
   background: #61e0c1;
-  box-shadow: 0 0 18px rgba(97, 224, 193, 0.65);
-  transform: scale(1.3);
+  color: #08130f;
+  box-shadow: 0 0 22px rgba(97, 224, 193, 0.65);
+  transform: scale(1.1);
 }
 
 .beat-dot.accent.on {
+  border-color: #f0c985;
   background: #f0c985;
-  box-shadow: 0 0 20px rgba(240, 201, 133, 0.75);
+  color: #151414;
+  box-shadow: 0 0 26px rgba(240, 201, 133, 0.75);
 }
 
 .bpm-controls {
-  position: relative;
-  z-index: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
-  width: min(560px, 100%);
 }
 
 .bpm-step {
@@ -1371,7 +1434,7 @@ h1 {
   min-height: 44px;
   padding: 0 4px;
   border: 1px solid rgba(255, 248, 236, 0.16);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 248, 236, 0.08);
   color: #fff8ec;
   font-weight: 900;
@@ -1387,27 +1450,25 @@ h1 {
 }
 
 .metro-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
 .beats-stepper {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  border: 1px solid rgba(255, 248, 236, 0.16);
-  border-radius: 8px;
-  background: rgba(255, 248, 236, 0.08);
+  justify-content: space-between;
   overflow: hidden;
+  border: 1px solid rgba(255, 248, 236, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 248, 236, 0.08);
 }
 
 .beats-stepper button {
   width: 46px;
-  min-height: 44px;
+  min-height: 48px;
   border: 0;
   background: transparent;
   color: #fff8ec;
@@ -1416,17 +1477,16 @@ h1 {
 }
 
 .beats-stepper span {
-  min-width: 58px;
-  text-align: center;
   color: #fff8ec;
   font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .tap-tempo {
-  min-width: 92px;
-  min-height: 44px;
-  border: 1px solid rgba(240, 201, 133, 0.4);
-  border-radius: 8px;
+  min-height: 48px;
+  border: 1px solid rgba(240, 201, 133, 0.45);
+  border-radius: 10px;
   background: rgba(240, 201, 133, 0.12);
   color: #f0c985;
   font-weight: 950;
@@ -1434,36 +1494,64 @@ h1 {
 }
 
 .metro-toggles {
-  position: relative;
-  z-index: 1;
-  display: flex;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 .metro-toggles button {
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
-  min-height: 44px;
-  padding: 0 14px;
+  padding: 0 8px;
   border: 1px solid rgba(255, 248, 236, 0.14);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 248, 236, 0.06);
   color: #bfb6a9;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .metro-toggles button svg {
   width: 15px;
   height: 15px;
+  flex: none;
 }
 
 .metro-toggles button.on {
   border-color: rgba(97, 224, 193, 0.5);
   background: rgba(97, 224, 193, 0.12);
   color: #61e0c1;
+}
+
+/* 시작/정지: 엄지가 닿는 맨 아래, 크게 */
+.big-action {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f0c985, #d99b56);
+  color: #161616;
+  font-size: 1.2rem;
+  font-weight: 950;
+  box-shadow: 0 14px 30px rgba(240, 201, 133, 0.22);
+}
+
+.big-action.stop {
+  background: linear-gradient(180deg, #ff7a5f, #c94737);
+  color: #fff8ec;
+  box-shadow: 0 14px 30px rgba(201, 71, 55, 0.3);
+}
+
+.big-action svg {
+  width: 20px;
+  height: 20px;
 }
 
 .metro-flash {
@@ -1480,33 +1568,127 @@ h1 {
   pointer-events: none;
 }
 
-@media (max-width: 480px) {
-  .beat-dot {
-    width: 15px;
-    height: 15px;
+/* ---------- 화면 크기별 ---------- */
+/* 아이패드·큰 화면: 기둥을 넓히고 악기 그림을 원래 크기로 */
+@media (min-width: 700px) and (min-height: 900px) {
+  .app {
+    --col: 720px;
+    --art-scale: 1;
+    --console-gap: 16px;
+    --note-size: clamp(120px, 15vh, 220px);
+    --rail-h: clamp(90px, 10vh, 140px);
+    --string-h: clamp(72px, 8vh, 100px);
+    --bpm-size: clamp(130px, 17vh, 230px);
   }
 
-  .bpm-step {
-    min-width: 46px;
+  .tuner-console {
+    padding: 22px;
+  }
+
+  /* 아이패드는 거치대에 두고 보니 엄지 자리보다 균형이 중요: 카드를 남는 공간의 가운데에 */
+  .tuner-console {
+    margin-block: auto;
+  }
+
+  .flex-spacer {
+    flex: 0 0 0;
+  }
+
+  .guide {
+    font-size: 1.35rem;
+    min-height: 46px;
+  }
+
+  .cents span {
+    font-size: 2.6rem;
+  }
+
+  .string-button strong {
+    font-size: 1.6rem;
   }
 }
 
-.app-version {
-  margin: -8px auto 0;
-  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
-  color: rgba(244, 239, 231, 0.26);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-align: center;
-  -webkit-user-select: none;
-  user-select: none;
+/* 12.9·13인치 아이패드 */
+@media (min-width: 1000px) and (min-height: 1200px) {
+  .app {
+    --col: 820px;
+  }
+}
+
+@media (min-width: 700px) {
+  .sheet-layer {
+    align-items: center;
+  }
+
+  .sheet {
+    max-height: 90dvh;
+    padding-bottom: 24px;
+    border: 1px solid rgba(255, 248, 236, 0.16);
+    border-radius: 24px;
+  }
+}
+
+/* 키 작은 휴대폰(iPhone SE 등): 그림·간격을 줄여 최대한 한 화면에 */
+@media (max-height: 720px) {
+  .app {
+    --art-scale: 0.5;
+    --console-gap: 6px;
+    gap: 8px;
+  }
+
+  .tuner-console {
+    padding: 10px 12px;
+  }
+
+  .guide {
+    min-height: 34px;
+    font-size: 1.02rem;
+  }
+
+  .detail-line {
+    display: none;
+  }
+
+  .metronome-console {
+    gap: 12px;
+  }
+}
+
+/* 좁은 휴대폰(375pt 등): 앱 이름이 Tuner/Metronome 버튼에 가리지 않게 */
+@media (max-width: 400px) {
+  .brand {
+    gap: 7px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-name {
+    font-size: 0.92rem;
+  }
+
+  .segmented button {
+    padding: 0 10px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .brand-name {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .needle,
   .needle::before,
-  .status {
+  .rail-fill,
+  .guide,
+  .sheet,
+  .sheet-backdrop {
     transition: none;
+    animation: none;
   }
 }

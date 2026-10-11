@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Mic, MicOff, Music, Play, RotateCcw, Settings, Square, Timer, Vibrate, Volume2, Zap } from 'lucide-react';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Check, ChevronDown, Lock, Mic, MicOff, Music, Play, RefreshCw, Square, Vibrate, Volume2, Zap } from 'lucide-react';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { detectPitch } from './pitch.js';
 import './styles.css';
@@ -15,6 +15,159 @@ function setKeepAwake(owner, active) {
   const stayAwake = keepAwakeOwners.tuner || keepAwakeOwners.metronome;
   (stayAwake ? KeepAwake.keepAwake() : KeepAwake.allowSleep()).catch(() => {});
 }
+
+// 진동: 네이티브(iOS/Android)는 Capacitor Haptics, 웹은 navigator.vibrate 폴백.
+function vibrateFallback(pattern) {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* 미지원 환경 */
+  }
+}
+
+function hapticTap(strong = false) {
+  Haptics.impact({ style: strong ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => vibrateFallback(strong ? 30 : 15));
+}
+
+function hapticSuccess() {
+  Haptics.notification({ type: NotificationType.Success }).catch(() => vibrateFallback([30, 60, 30]));
+}
+
+// 언어: 설정 창에서 고른 값이 있으면 그것을, 없으면 기기 언어(한국어면 한국어, 그 밖엔 영어).
+function detectLanguage() {
+  try {
+    const stored = localStorage.getItem('yeolTuner.language');
+    if (stored === 'ko' || stored === 'en') return stored;
+  } catch {
+    /* 저장소 접근 불가 */
+  }
+  const languages = [...(navigator.languages ?? []), navigator.language].filter(Boolean);
+  return languages.some((language) => language.toLowerCase().startsWith('ko')) ? 'ko' : 'en';
+}
+
+// 짧은 이름표(Tuner, Auto, Mic on…)는 두 언어 모두 영어, 안내 문장만 언어를 따른다.
+const STRINGS = {
+  ko: {
+    viewLabel: '모드 전환',
+    openSettings: '악기와 튜닝 설정 열기',
+    tunerLabel: '튜닝 상태',
+    locked: (note) => `${note} 고정`,
+    backToAuto: 'Auto로',
+    guideIdle: '줄을 튕겨 보세요',
+    guideGood: '정확해요',
+    guideFlatNear: '줄을 조금 조여요',
+    guideFlatFar: '줄을 조여요',
+    guideSharpNear: '줄을 조금 풀어요',
+    guideSharpFar: '줄을 풀어요',
+    now: '지금',
+    heard: '감지',
+    target: '목표',
+    stringsLabel: '줄 선택',
+    stringsHint: '줄 — 누르면 그 줄만 맞춰요',
+    stringAria: (num, note, done) => `${num}번 줄 ${note}${done ? ', 맞춤' : ''}`,
+    progress: (done, total) => `${done}/${total} 완료`,
+    complete: (total) => `튜닝 완료 · ${total}줄 모두 맞았어요`,
+    input: '입력',
+    errors: {
+      permission: '마이크 권한이 꺼져 있어요. 휴대폰 설정에서 YEOL Tuner의 마이크를 허용해 주세요.',
+      noMic: '사용할 수 있는 마이크를 찾지 못했어요.',
+      generic: '마이크를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.'
+    },
+    sheetTitle: '악기와 튜닝',
+    done: '완료',
+    instrument: '악기',
+    tuning: '튜닝',
+    reference: '기준음 A4',
+    referenceDown: '기준음 1 Hz 낮추기',
+    referenceUp: '기준음 1 Hz 높이기',
+    referenceHint: '오케스트라·앙상블은 보통 442 Hz에 맞춰요.',
+    feedback: '알림',
+    tuneHaptic: '맞았을 때 진동',
+    tuneHapticHint: '줄이 맞으면 "톡" 하고 알려 줘요',
+    language: '언어 · Language',
+    metronomeLabel: '메트로놈',
+    beatDisplay: '박자 표시',
+    slower: '1 느리게',
+    faster: '1 빠르게',
+    tempo: '템포 (BPM)',
+    beatsLabel: '마디당 박자 수',
+    beats: (count) => `${count}박`,
+    fewerBeats: '박자 줄이기',
+    moreBeats: '박자 늘리기',
+    feedbackModes: '박자 피드백 방식',
+    sound: '소리',
+    vibration: '진동',
+    flash: '번쩍임',
+    start: '시작',
+    stop: '정지'
+  },
+  en: {
+    viewLabel: 'Switch mode',
+    openSettings: 'Open instrument and tuning settings',
+    tunerLabel: 'Tuning status',
+    locked: (note) => `${note} only`,
+    backToAuto: 'Back to Auto',
+    guideIdle: 'Pluck a string',
+    guideGood: 'In tune',
+    guideFlatNear: 'Tighten a little',
+    guideFlatFar: 'Tighten',
+    guideSharpNear: 'Loosen a little',
+    guideSharpFar: 'Loosen',
+    now: 'Now',
+    heard: 'Heard',
+    target: 'Target',
+    stringsLabel: 'Choose a string',
+    stringsHint: 'Strings — tap one to tune it alone',
+    stringAria: (num, note, done) => `String ${num}, ${note}${done ? ', in tune' : ''}`,
+    progress: (done, total) => `${done}/${total} tuned`,
+    complete: (total) => `All ${total} strings in tune`,
+    input: 'Input',
+    errors: {
+      permission: 'Microphone access is off. Allow it for YEOL Tuner in your device settings.',
+      noMic: 'No microphone was found.',
+      generic: 'Could not start the microphone. Please try again.'
+    },
+    sheetTitle: 'Instrument & tuning',
+    done: 'Done',
+    instrument: 'Instrument',
+    tuning: 'Tuning',
+    reference: 'Reference A4',
+    referenceDown: 'Lower reference by 1 Hz',
+    referenceUp: 'Raise reference by 1 Hz',
+    referenceHint: 'Orchestras and ensembles often tune to 442 Hz.',
+    feedback: 'Feedback',
+    tuneHaptic: 'Vibrate when in tune',
+    tuneHapticHint: 'A gentle tap when a string is in tune',
+    language: 'Language · 언어',
+    metronomeLabel: 'Metronome',
+    beatDisplay: 'Beats',
+    slower: '1 slower',
+    faster: '1 faster',
+    tempo: 'Tempo (BPM)',
+    beatsLabel: 'Beats per bar',
+    beats: (count) => `${count} beat${count === 1 ? '' : 's'}`,
+    fewerBeats: 'Fewer beats',
+    moreBeats: 'More beats',
+    feedbackModes: 'Beat feedback',
+    sound: 'Sound',
+    vibration: 'Vibrate',
+    flash: 'Flash',
+    start: 'Start',
+    stop: 'Stop'
+  }
+};
+
+// 빠르기말: 경계값은 흔히 쓰는 메트로놈 표기를 따랐다(자료마다 조금씩 다르다).
+const TEMPO_MARKINGS = [
+  { max: 59, name: 'Largo', ko: '아주 느리게', en: 'very slow' },
+  { max: 65, name: 'Larghetto', ko: '꽤 느리게', en: 'rather slow' },
+  { max: 75, name: 'Adagio', ko: '느리게', en: 'slow' },
+  { max: 107, name: 'Andante', ko: '걷는 빠르기', en: 'walking pace' },
+  { max: 119, name: 'Moderato', ko: '보통 빠르기', en: 'moderate' },
+  { max: 167, name: 'Allegro', ko: '빠르게', en: 'fast' },
+  { max: 199, name: 'Presto', ko: '매우 빠르게', en: 'very fast' },
+  { max: Number.POSITIVE_INFINITY, name: 'Prestissimo', ko: '가장 빠르게', en: 'as fast as possible' }
+];
 
 const INSTRUMENTS = {
   guitar: {
@@ -196,6 +349,20 @@ const INSTRUMENTS = {
   }
 };
 
+// 설정 창의 악기 카드 순서(자주 쓰는 순)와 한국어 이름.
+const INSTRUMENT_ORDER = ['guitar', 'bass', 'ukulele', 'violin', 'viola', 'cello', 'doubleBass', 'mandolin', 'banjo'];
+const INSTRUMENT_NAMES_KO = {
+  guitar: '기타',
+  bass: '베이스 기타',
+  ukulele: '우쿨렐레',
+  violin: '바이올린',
+  viola: '비올라',
+  cello: '첼로',
+  doubleBass: '더블베이스',
+  mandolin: '만돌린',
+  banjo: '밴조'
+};
+
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 
 // 오케스트라·앙상블 관례에 맞춘 기준음(A4) 범위. 국내 오케스트라는 442Hz가 일반적.
@@ -223,6 +390,9 @@ const MID_CENTS = 12;
 const LOCK_ENTER_CENTS = 4;
 const LOCK_EXIT_CENTS = 7;
 const LOCK_AFTER_MS = 600;
+// 락 중 화면 갱신: 이만큼 벗어났을 때만, 이 간격으로 천천히 따라간다.
+const LOCKED_DEADBAND_CENTS = 0.6;
+const LOCKED_UPDATE_INTERVAL_MS = 450;
 // 마지막 검출 후 이 시간 동안은 고속 분석을 유지한다 (여운 추적).
 const ACTIVE_HOLD_MS = 1200;
 // 줄을 다시 튕기지 않아도 줄감개를 돌릴 시간을 주도록, 소리가 사라진 뒤에도
@@ -234,7 +404,9 @@ const SIGNAL_GATE = 0.001;
 const PITCH_JUMP_CENTS = 80;
 const PITCH_CONFIRM_CENTS = 60;
 const IN_TUNE_ENTER_CENTS = 4;
-const IN_TUNE_EXIT_CENTS = 7;
+// 나가는 기준을 7¢로 두면 "−6 cents"와 "정확해요"가 함께 보였다(1.3.0 실측).
+// 표시값은 스무딩돼 정착 상태 흔들림이 ±0.2¢ 안팎이라 1.5¢ 차이면 깜빡이지 않는다.
+const IN_TUNE_EXIT_CENTS = 5.5;
 
 function frequencyToNote(frequency, referencePitch = DEFAULT_REFERENCE_PITCH) {
   const midi = Math.round(69 + 12 * Math.log2(frequency / referencePitch));
@@ -259,65 +431,161 @@ function getInstrumentShape(instrumentKey) {
 
 // memo: 악기 그림은 가장 큰 DOM 서브트리다. 주파수가 갱신되어도 같은 줄을 잡고
 // 있으면 props가 안 바뀌므로 리렌더/리페인트를 건너뛴다 (발열 핵심).
-const InstrumentVisual = memo(function InstrumentVisual({ instrumentKey, instrument, strings, activeString }) {
+// 그림 전체(.art-stage)를 transform으로 축소해 악기별 비율은 그대로 두고 높이만 줄인다.
+const InstrumentVisual = memo(function InstrumentVisual({ instrumentKey, strings, activeString }) {
   const shape = getInstrumentShape(instrumentKey);
   const activeIndex = Math.max(0, strings.findIndex((string) => string.id === activeString.id));
 
   return (
-    <div className={`instrument-visual ${shape} ${instrumentKey}`} aria-label={`${instrument.label} 현 위치`}>
-      <div className="instrument-label">
-        <span>{instrument.label}</span>
-        <strong>{activeString.name}</strong>
-      </div>
+    <div className={`instrument-visual ${shape} ${instrumentKey}`} aria-hidden="true">
       <div className="instrument-art" style={{ '--string-count': strings.length }}>
-        <div className="head">
-          <span className="scroll" />
-          <span className="peg peg-a" />
-          <span className="peg peg-b" />
-          <span className="peg peg-c" />
-          <span className="peg peg-d" />
-        </div>
-        <div className="neck">
-          {strings.map((string, index) => (
-            <span
-              key={string.id}
-              className={`visual-string ${index === activeIndex ? 'active' : ''}`}
-              style={{ '--string-index': index }}
-              aria-hidden="true"
-            />
-          ))}
-        </div>
-        <div className="body">
-          <span className="sound-hole" />
+        <div className="art-stage">
+          <div className="head">
+            <span className="scroll" />
+            <span className="peg peg-a" />
+            <span className="peg peg-b" />
+            <span className="peg peg-c" />
+            <span className="peg peg-d" />
+          </div>
+          <div className="neck">
+            {strings.map((string, index) => (
+              <span
+                key={string.id}
+                className={`visual-string ${index === activeIndex ? 'active' : ''}`}
+                style={{ '--string-index': index }}
+              />
+            ))}
+          </div>
+          <div className="body">
+            <span className="sound-hole" />
+          </div>
         </div>
       </div>
     </div>
   );
 });
 
-// memo: 줄 선택 버튼 6개도 매 프레임 재조정되던 서브트리다. 감지 대상 줄이
-// 바뀔 때만(=드물게) 리렌더된다.
-const StringGrid = memo(function StringGrid({ strings, label, mode, selectedId, currentId, onSelect }) {
+// memo: 줄 버튼은 감지 대상 줄·완료 표시가 바뀔 때만(=드물게) 리렌더된다.
+const StringRow = memo(function StringRow({ strings, mode, selectedId, currentId, doneIds, onSelect, t }) {
+  const doneCount = strings.filter((string) => doneIds.has(string.id)).length;
   return (
-    <section className="strings" aria-label={`${label} 줄 선택`}>
-      {strings.map((string) => {
-        const active = mode === 'manual' && selectedId === string.id;
-        const current = currentId === string.id;
-        return (
-          <button
-            key={string.id}
-            className={`${active ? 'selected' : ''} ${current ? 'current' : ''}`}
-            onClick={() => onSelect(string.id)}
-          >
-            <strong>{string.name}</strong>
-            <span>{string.note}</span>
-            <small>{string.freq.toFixed(2)} Hz</small>
-          </button>
-        );
-      })}
+    <section className="strings" aria-label={t.stringsLabel}>
+      <div className="strings-head">
+        <span>{t.stringsHint}</span>
+        {doneCount > 0 && <span className="strings-progress">{t.progress(doneCount, strings.length)}</span>}
+      </div>
+      <div className="strings-row" style={{ '--string-count': strings.length }}>
+        {strings.map((string) => {
+          const selected = mode === 'manual' && selectedId === string.id;
+          const current = !selected && currentId === string.id;
+          const done = doneIds.has(string.id);
+          const number = string.name.match(/^\d+/)?.[0] ?? '';
+          return (
+            <button
+              key={string.id}
+              className={`string-button ${selected ? 'selected' : ''} ${current ? 'current' : ''}`}
+              onClick={() => onSelect(string.id)}
+              aria-pressed={selected}
+              aria-label={t.stringAria(number, string.note, done)}
+            >
+              {done && <span className="string-done"><Check aria-hidden="true" /></span>}
+              {selected && <span className="string-lock"><Lock aria-hidden="true" /></span>}
+              <small>{number}</small>
+              <strong>{string.note}</strong>
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 });
+
+function SettingsSheet({
+  t, lang, instrumentKey, tuningKey, referencePitch, tuneHaptic,
+  onInstrument, onTuning, onReference, onTuneHaptic, onLanguage, onClose
+}) {
+  const instrument = INSTRUMENTS[instrumentKey];
+
+  useEffect(() => {
+    const handleKey = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="sheet-layer">
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div className="sheet-handle" aria-hidden="true" />
+        <div className="sheet-title">
+          <h2 id="sheet-title">{t.sheetTitle}</h2>
+          <button className="sheet-done" onClick={onClose}>{t.done}</button>
+        </div>
+
+        <p className="sheet-label">{t.instrument}</p>
+        <div className="instrument-grid">
+          {INSTRUMENT_ORDER.map((key) => {
+            const item = INSTRUMENTS[key];
+            const firstTuning = Object.values(item.tunings)[0];
+            return (
+              <button key={key} className={key === instrumentKey ? 'on' : ''} aria-pressed={key === instrumentKey} onClick={() => onInstrument(key)}>
+                <span>
+                  <strong>{item.label}</strong>
+                  {lang === 'ko' && <small>{INSTRUMENT_NAMES_KO[key]}</small>}
+                </span>
+                <code>{firstTuning.strings.map((string) => string.note.replace(/\d+$/, '')).join(' ')}</code>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="sheet-label">{t.tuning}</p>
+        <div className="chip-row">
+          {Object.entries(instrument.tunings).map(([key, value]) => (
+            <button key={key} className={`chip ${key === tuningKey ? 'on' : ''}`} aria-pressed={key === tuningKey} onClick={() => onTuning(key)}>
+              {value.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="sheet-label">{t.reference}</p>
+        <div className="chip-row">
+          <div className="stepper">
+            <button onClick={() => onReference(referencePitch - 1)} disabled={referencePitch <= REFERENCE_PITCHES[0]} aria-label={t.referenceDown}>−</button>
+            <strong>{referencePitch} Hz</strong>
+            <button onClick={() => onReference(referencePitch + 1)} disabled={referencePitch >= REFERENCE_PITCHES[REFERENCE_PITCHES.length - 1]} aria-label={t.referenceUp}>+</button>
+          </div>
+          {[440, 442].map((hz) => (
+            <button key={hz} className={`chip ${referencePitch === hz ? 'on' : ''}`} aria-pressed={referencePitch === hz} onClick={() => onReference(hz)}>
+              {hz}
+            </button>
+          ))}
+        </div>
+        <p className="sheet-hint">{t.referenceHint}</p>
+
+        <p className="sheet-label">{t.feedback}</p>
+        <button className="toggle-row" role="switch" aria-checked={tuneHaptic} onClick={() => onTuneHaptic(!tuneHaptic)}>
+          <Vibrate aria-hidden="true" />
+          <span>
+            <strong>{t.tuneHaptic}</strong>
+            <small>{t.tuneHapticHint}</small>
+          </span>
+          <span className={`switch ${tuneHaptic ? 'on' : ''}`} aria-hidden="true" />
+        </button>
+
+        <p className="sheet-label">{t.language}</p>
+        <div className="chip-row">
+          <button className={`chip ${lang === 'ko' ? 'on' : ''}`} aria-pressed={lang === 'ko'} onClick={() => onLanguage('ko')}>한국어</button>
+          <button className={`chip ${lang === 'en' ? 'on' : ''}`} aria-pressed={lang === 'en'} onClick={() => onLanguage('en')}>English</button>
+        </div>
+
+        <p className="sheet-version">YEOL Tuner v{APP_VERSION}</p>
+      </div>
+    </div>
+  );
+}
 
 const METRONOME_DEFAULTS = { bpm: 100, beats: 4, sound: true, haptic: false, flash: false };
 const METRONOME_MIN_BPM = 40;
@@ -332,7 +600,7 @@ function loadMetronomeSettings() {
   }
 }
 
-function Metronome() {
+function Metronome({ t, lang }) {
   const [settings, setSettings] = useState(loadMetronomeSettings);
   const [isRunning, setIsRunning] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(-1);
@@ -352,17 +620,6 @@ function Metronome() {
 
   const update = (patch) => setSettings((prev) => ({ ...prev, ...patch }));
   const clampBpm = (value) => Math.max(METRONOME_MIN_BPM, Math.min(METRONOME_MAX_BPM, Math.round(value)));
-
-  function triggerHaptic(accent) {
-    // 네이티브(iOS/Android)는 Capacitor Haptics, 웹은 navigator.vibrate 폴백.
-    Haptics.impact({ style: accent ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {
-      try {
-        navigator.vibrate?.(accent ? 30 : 15);
-      } catch {
-        /* 미지원 환경 */
-      }
-    });
-  }
 
   function triggerFlash(accent) {
     flashRef.current?.animate(
@@ -392,7 +649,7 @@ function Metronome() {
       if (!timerRef.current) return; // 정지 후 도착한 예약은 무시
       setCurrentBeat(beatNumber);
       if (settingsRef.current.flash) triggerFlash(accent);
-      if (settingsRef.current.haptic) triggerHaptic(accent);
+      if (settingsRef.current.haptic) hapticTap(accent);
     }, delay);
   }
 
@@ -461,66 +718,76 @@ function Metronome() {
     };
   }, []);
 
+  const marking = TEMPO_MARKINGS.find((item) => settings.bpm <= item.max);
+
   return (
-    <div className="tuner-console metronome-console">
-      <div className="readout">
-        <p className="eyebrow">{isRunning ? 'Playing' : 'Metronome'}</p>
-        <h1>{settings.bpm}</h1>
-        <p className="status idle">BPM</p>
-      </div>
-
-      <div className="beat-dots" aria-label="박자 표시">
-        {Array.from({ length: settings.beats }).map((_, index) => (
-          <span
-            key={index}
-            className={`beat-dot ${index === currentBeat ? 'on' : ''} ${index === 0 && settings.beats > 1 ? 'accent' : ''}`}
-          />
-        ))}
-      </div>
-
-      <div className="bpm-controls">
-        <button className="bpm-step" onClick={() => update({ bpm: clampBpm(settings.bpm - 1) })} aria-label="1 느리게">−1</button>
-        <input
-          type="range"
-          min={METRONOME_MIN_BPM}
-          max={METRONOME_MAX_BPM}
-          value={settings.bpm}
-          onChange={(event) => update({ bpm: clampBpm(Number(event.target.value)) })}
-          aria-label="템포 (BPM)"
-        />
-        <button className="bpm-step" onClick={() => update({ bpm: clampBpm(settings.bpm + 1) })} aria-label="1 빠르게">+1</button>
-      </div>
-
-      <div className="metro-row">
-        <div className="beats-stepper" aria-label="마디당 박자 수">
-          <button onClick={() => update({ beats: Math.max(1, settings.beats - 1) })} aria-label="박자 줄이기">−</button>
-          <span>{settings.beats}박</span>
-          <button onClick={() => update({ beats: Math.min(8, settings.beats + 1) })} aria-label="박자 늘리기">+</button>
+    <>
+      <section className="tuner-console metronome-console" aria-label={t.metronomeLabel}>
+        <div className="console-top">
+          <span className="eyebrow">
+            {isRunning && <span className="live-dot gold" aria-hidden="true" />}
+            {isRunning ? 'Playing' : 'Metronome'}
+          </span>
         </div>
-        <button className="tap-tempo" onClick={tapTempo}>TAP</button>
-      </div>
 
-      <div className="metro-toggles" aria-label="박자 피드백 방식">
-        <button className={settings.sound ? 'on' : ''} onClick={() => update({ sound: !settings.sound })} aria-pressed={settings.sound}>
-          <Volume2 aria-hidden="true" />소리
-        </button>
-        <button className={settings.haptic ? 'on' : ''} onClick={() => update({ haptic: !settings.haptic })} aria-pressed={settings.haptic}>
-          <Vibrate aria-hidden="true" />진동
-        </button>
-        <button className={settings.flash ? 'on' : ''} onClick={() => update({ flash: !settings.flash })} aria-pressed={settings.flash}>
-          <Zap aria-hidden="true" />번쩍임
-        </button>
-      </div>
+        <div className="bpm-readout">{settings.bpm}</div>
+        <p className="tempo-name">{marking.name} <span>· {marking[lang]} · BPM</span></p>
 
-      <div className="actions">
-        <button className={`mic ${isRunning ? 'live' : ''}`} onClick={isRunning ? stop : start}>
-          {isRunning ? <Square aria-hidden="true" /> : <Play aria-hidden="true" />}
-          {isRunning ? '정지' : '시작'}
-        </button>
-      </div>
+        <div className="beat-dots" style={{ '--beat-count': settings.beats }} aria-label={t.beatDisplay}>
+          {Array.from({ length: settings.beats }).map((_, index) => (
+            <span
+              key={index}
+              className={`beat-dot ${index === currentBeat ? 'on' : ''} ${index === 0 && settings.beats > 1 ? 'accent' : ''}`}
+            >
+              {index + 1}
+            </span>
+          ))}
+        </div>
 
-      <div ref={flashRef} className="metro-flash" aria-hidden="true" />
-    </div>
+        <div className="bpm-controls">
+          <button className="bpm-step" onClick={() => update({ bpm: clampBpm(settings.bpm - 1) })} aria-label={t.slower}>−1</button>
+          <input
+            type="range"
+            min={METRONOME_MIN_BPM}
+            max={METRONOME_MAX_BPM}
+            value={settings.bpm}
+            onChange={(event) => update({ bpm: clampBpm(Number(event.target.value)) })}
+            aria-label={t.tempo}
+          />
+          <button className="bpm-step" onClick={() => update({ bpm: clampBpm(settings.bpm + 1) })} aria-label={t.faster}>+1</button>
+        </div>
+
+        <div className="metro-row">
+          <div className="beats-stepper" aria-label={t.beatsLabel}>
+            <button onClick={() => update({ beats: Math.max(1, settings.beats - 1) })} aria-label={t.fewerBeats}>−</button>
+            <span>{t.beats(settings.beats)}</span>
+            <button onClick={() => update({ beats: Math.min(8, settings.beats + 1) })} aria-label={t.moreBeats}>+</button>
+          </div>
+          <button className="tap-tempo" onClick={tapTempo}>TAP</button>
+        </div>
+
+        <div className="metro-toggles" aria-label={t.feedbackModes}>
+          <button className={settings.sound ? 'on' : ''} onClick={() => update({ sound: !settings.sound })} aria-pressed={settings.sound}>
+            <Volume2 aria-hidden="true" />{t.sound}
+          </button>
+          <button className={settings.haptic ? 'on' : ''} onClick={() => update({ haptic: !settings.haptic })} aria-pressed={settings.haptic}>
+            <Vibrate aria-hidden="true" />{t.vibration}
+          </button>
+          <button className={settings.flash ? 'on' : ''} onClick={() => update({ flash: !settings.flash })} aria-pressed={settings.flash}>
+            <Zap aria-hidden="true" />{t.flash}
+          </button>
+        </div>
+
+        <div ref={flashRef} className="metro-flash" aria-hidden="true" />
+      </section>
+
+      <div className="flex-spacer" />
+
+      <button className={`big-action ${isRunning ? 'stop' : ''}`} onClick={isRunning ? stop : start}>
+        {isRunning ? <Square aria-hidden="true" /> : <Play aria-hidden="true" />}
+        {isRunning ? t.stop : t.start}
+      </button>
+    </>
   );
 }
 
@@ -530,7 +797,7 @@ function App() {
   const [error, setError] = useState('');
   const [needsGestureStart, setNeedsGestureStart] = useState(false);
   const [frequency, setFrequency] = useState(null);
-  const [volume, setVolume] = useState(0);
+  const [level, setLevel] = useState(0);
   const [instrumentKey, setInstrumentKey] = useState('guitar');
   const [tuningKey, setTuningKey] = useState('standard');
   const [selectedStringId, setSelectedStringId] = useState('guitar-standard-E2');
@@ -539,6 +806,13 @@ function App() {
     const stored = Number(localStorage.getItem('yeolTuner.referencePitch'));
     return REFERENCE_PITCHES.includes(stored) ? stored : DEFAULT_REFERENCE_PITCH;
   });
+  const [lang, setLang] = useState(detectLanguage);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [tuneHaptic, setTuneHaptic] = useState(() => localStorage.getItem('yeolTuner.tuneHaptic') !== 'off');
+  // 이번에 맞춘 줄(✓). 악기·튜닝·기준음을 바꾸거나 앱을 다시 열면 비운다.
+  const [doneIds, setDoneIds] = useState(() => new Set());
+  const [showComplete, setShowComplete] = useState(false);
+  const t = STRINGS[lang];
 
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
@@ -564,6 +838,10 @@ function App() {
   const unlockStrikesRef = useRef(0);
   const tuningRangeRef = useRef({ min: 26, max: 950 });
   const inTuneRef = useRef(false);
+  // tick()은 마운트 시점 클로저로 돌기 때문에 바뀌는 값은 ref로 읽는다.
+  const modeRef = useRef('auto');
+  const selectedIdRef = useRef(null);
+  const tuneHapticRef = useRef(tuneHaptic);
 
   const instrument = INSTRUMENTS[instrumentKey];
   const activeTuningKey = instrument.tunings[tuningKey] ? tuningKey : Object.keys(instrument.tunings)[0];
@@ -597,6 +875,8 @@ function App() {
   const selectedString = useMemo(() => {
     return calibratedStrings.find((string) => string.id === selectedStringId) ?? calibratedStrings[0];
   }, [selectedStringId, calibratedStrings]);
+  modeRef.current = mode;
+  selectedIdRef.current = selectedString.id;
 
   const detected = useMemo(() => {
     if (!frequency) return null;
@@ -615,7 +895,7 @@ function App() {
     };
   }, [frequency, mode, selectedString, calibratedStrings, referencePitch]);
 
-  // ±4¢에서 들어와 ±7¢에서 나가는 히스테리시스로 경계 플리커를 막는다.
+  // ±4¢에서 들어와 ±5.5¢에서 나가는 히스테리시스로 경계 플리커를 막는다.
   if (!detected) {
     inTuneRef.current = false;
   } else {
@@ -628,24 +908,14 @@ function App() {
   const roundedCents = detected ? Math.round(detected.cents) : 0;
   const visualString = detected?.target ?? selectedString;
   const tuneTone = !detected ? 'idle' : isInTune ? 'good' : detected.cents < 0 ? 'flat' : 'sharp';
-  const tuneState = !detected
-    ? '대기 중'
+  const guideText = !detected
+    ? t.guideIdle
     : isInTune
-      ? '정확해요'
-      : Math.abs(detected.cents) <= 12
-        ? detected.cents < 0
-          ? '조금 올려요'
-          : '조금 내려요'
-        : detected.cents < 0
-          ? '음을 올려요'
-          : '음을 낮춰요';
-  const actionGuide = !detected
-    ? { mark: '0', label: '소리가 들리면 자동으로 잡아요', sub: '가운데에서 대기 중' }
-    : isInTune
-      ? { mark: '✓', label: '좋아요, 거의 정확해요', sub: `${detected.target.name} ${detected.target.freq.toFixed(2)} Hz` }
+      ? t.guideGood
       : detected.cents < 0
-        ? { mark: '♭', label: '줄을 조금 더 조여요', sub: `${Math.abs(roundedCents)} cents 낮아요` }
-        : { mark: '♯', label: '줄을 조금 풀어요', sub: `${roundedCents} cents 높아요` };
+        ? (Math.abs(detected.cents) <= MID_CENTS ? t.guideFlatNear : t.guideFlatFar)
+        : (detected.cents <= MID_CENTS ? t.guideSharpNear : t.guideSharpFar);
+  const guideMark = tuneTone === 'good' ? <Check aria-hidden="true" /> : tuneTone === 'flat' ? '♭' : tuneTone === 'sharp' ? '♯' : null;
 
   function resetMeasurement() {
     smoothedPitchRef.current = null;
@@ -661,11 +931,29 @@ function App() {
     setFrequency(null);
   }
 
-  // 안정적 참조여야 StringGrid의 memo가 유지된다.
+  // 안정적 참조여야 StringRow의 memo가 유지된다.
+  // 고정된 줄을 한 번 더 누르면 Auto로 돌아간다.
   const selectString = useCallback((id) => {
+    if (modeRef.current === 'manual' && selectedIdRef.current === id) {
+      setMode('auto');
+      return;
+    }
     setMode('manual');
     setSelectedStringId(id);
   }, []);
+
+  // 바늘이 안착(락인)한 순간 = 그 줄이 맞은 순간. tick()에서 호출되므로 ref와
+  // setState만 쓴다. 한 줄만 맞추는 중이면 그 줄일 때만 인정한다.
+  function handleLockIn(stringId) {
+    if (modeRef.current === 'manual' && stringId !== selectedIdRef.current) return;
+    if (tuneHapticRef.current) hapticTap(true);
+    setDoneIds((previous) => {
+      if (previous.has(stringId)) return previous;
+      const next = new Set(previous);
+      next.add(stringId);
+      return next;
+    });
+  }
 
   function tick() {
     const analyser = analyserRef.current;
@@ -681,12 +969,13 @@ function App() {
     const signalLevel = Math.sqrt(energy / buffer.length);
     const now = performance.now();
 
-    // 입력 레벨 표시는 장식용이므로 최대 ~6.5Hz로만 갱신하고 5% 단위로 양자화한다.
+    // 입력 레벨 표시는 장식용이므로 최대 ~6.5Hz로만 갱신하고 막대 5칸으로 양자화한다.
     // (연주 중 매 프레임 % 변화가 그 자체로 전체 리렌더를 유발하던 발열 원인 제거)
     if (now - lastVolumeAtRef.current > 150) {
       lastVolumeAtRef.current = now;
-      const volumeStep = Math.min(100, Math.round((signalLevel * 2800) / 5) * 5);
-      setVolume((previous) => (previous === volumeStep ? previous : volumeStep));
+      const percent = signalLevel * 2800;
+      const bars = percent < 4 ? 0 : Math.min(5, Math.ceil(percent / 20));
+      setLevel((previous) => (previous === bars ? previous : bars));
     }
 
     const range = tuningRangeRef.current;
@@ -734,23 +1023,18 @@ function App() {
           if (off < distance) distance = off;
         }
 
-        // 락인 상태 기계: ±4¢ 안에서 0.6초 → 안착. ±7¢ 두 프레임 연속 → 해제.
-        if (distance <= LOCK_ENTER_CENTS) {
-          if (!lockSinceRef.current) lockSinceRef.current = now;
-          if (now - lockSinceRef.current >= LOCK_AFTER_MS) lockActiveRef.current = true;
-          unlockStrikesRef.current = 0;
-        } else {
-          lockSinceRef.current = 0;
-          if (lockActiveRef.current) {
-            if (distance > LOCK_EXIT_CENTS) {
-              unlockStrikesRef.current += 1;
-              if (unlockStrikesRef.current >= 2) {
-                lockActiveRef.current = false;
-                unlockStrikesRef.current = 0;
-              }
-            } else {
+        // 락 해제는 날것의 값으로 빠르게: ±7¢ 밖이 두 프레임 연속이면 푼다
+        // (줄감개를 돌려 음이 벗어나면 바늘이 곧바로 따라가야 한다).
+        if (lockActiveRef.current) {
+          if (distance > LOCK_EXIT_CENTS) {
+            unlockStrikesRef.current += 1;
+            if (unlockStrikesRef.current >= 2) {
+              lockActiveRef.current = false;
+              lockSinceRef.current = 0;
               unlockStrikesRef.current = 0;
             }
+          } else {
+            unlockStrikesRef.current = 0;
           }
         }
 
@@ -770,15 +1054,43 @@ function App() {
         } else {
           smoothedPitchRef.current = median;
         }
+
+        // 락 진입(안착 = ✓·진동)은 화면과 같은 걸러진 값으로 판단한다: ±4¢ 안에서 0.6초.
+        // 날것의 값으로 보면 떨림(비브라토) 때문에 "정확해요"가 떠 있어도 ✓가 안 왔다(1.3.0 실측).
+        if (!lockActiveRef.current && !masked) {
+          let settledDistance = Number.POSITIVE_INFINITY;
+          let settledId = null;
+          for (const string of stringsRef.current) {
+            const off = Math.abs(centsOff(smoothedPitchRef.current, string.freq));
+            if (off < settledDistance) {
+              settledDistance = off;
+              settledId = string.id;
+            }
+          }
+          if (settledDistance <= LOCK_ENTER_CENTS) {
+            if (!lockSinceRef.current) lockSinceRef.current = now;
+            if (now - lockSinceRef.current >= LOCK_AFTER_MS) {
+              lockActiveRef.current = true;
+              unlockStrikesRef.current = 0;
+              handleLockIn(settledId);
+            }
+          } else {
+            lockSinceRef.current = 0;
+          }
+        }
       }
 
       // 어택 마스크 중엔 화면에 내보내지 않는다(튕길 때 바늘이 위로 튀는 현상 제거).
-      // 데드밴드: 락 중엔 미세 진동(±1.5¢)을 무시해 바늘이 앉아 있게 한다.
+      // 락 중엔 떨림은 이미 무거운 스무딩(α 0.06)이 걸러 주므로, 데드밴드는 작게 두고
+      // 대신 드물게(0.45초마다)만 갱신한다. 예전처럼 1.5¢ 데드밴드로 붙잡으면 안착 순간의
+      // 값(튕긴 직후라 1~2¢ 높음)이 계속 남아, −6¢ 줄이 "정확해요"로 보였다(1.3.0 실측).
       const nextPitch = smoothedPitchRef.current;
       const published = publishedPitchRef.current;
-      const deadband = lockActiveRef.current ? 1.5 : 0.3;
+      const locked = lockActiveRef.current;
+      const deadband = locked ? LOCKED_DEADBAND_CENTS : 0.3;
+      const interval = locked ? LOCKED_UPDATE_INTERVAL_MS : UI_UPDATE_INTERVAL_MS;
       const movedEnough = !published || Math.abs(centsOff(nextPitch, published)) > deadband;
-      if (!masked && movedEnough && now - lastFreqPublishAtRef.current >= UI_UPDATE_INTERVAL_MS) {
+      if (!masked && movedEnough && now - lastFreqPublishAtRef.current >= interval) {
         publishedPitchRef.current = nextPitch;
         lastFreqPublishAtRef.current = now;
         setFrequency(nextPitch);
@@ -880,11 +1192,11 @@ function App() {
       setIsListening(false);
       if (!isAutoStart) {
         if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') {
-          setError('마이크 권한이 꺼져 있어요. 휴대폰 설정에서 YEOL Tuner의 마이크를 허용해 주세요.');
+          setError('permission');
         } else if (err?.name === 'NotFoundError' || err?.name === 'NotSupportedError') {
-          setError('사용할 수 있는 마이크를 찾지 못했어요.');
+          setError('noMic');
         } else {
-          setError('마이크를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
+          setError('generic');
         }
       }
     } finally {
@@ -908,7 +1220,7 @@ function App() {
     isListeningRef.current = false;
     setIsListening(false);
     resetMeasurement();
-    setVolume(0);
+    setLevel(0);
   }
 
   useEffect(() => {
@@ -928,6 +1240,46 @@ function App() {
     localStorage.setItem('yeolTuner.referencePitch', String(referencePitch));
     resetMeasurement();
   }, [referencePitch]);
+
+  useEffect(() => {
+    tuneHapticRef.current = tuneHaptic;
+    localStorage.setItem('yeolTuner.tuneHaptic', tuneHaptic ? 'on' : 'off');
+  }, [tuneHaptic]);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  // 악기·튜닝·기준음이 바뀌면 줄 목록(목표 주파수)이 새로 만들어지므로 ✓를 비운다.
+  useEffect(() => {
+    setDoneIds(new Set());
+    setShowComplete(false);
+  }, [calibratedStrings]);
+
+  // 모든 줄이 ✓가 되면 「튜닝 완료」를 잠깐 보여 주고 성공 진동을 준다.
+  useEffect(() => {
+    if (doneIds.size === 0 || !calibratedStrings.every((string) => doneIds.has(string.id))) return undefined;
+    setShowComplete(true);
+    if (tuneHapticRef.current) hapticSuccess();
+    const timer = window.setTimeout(() => setShowComplete(false), 4000);
+    return () => clearTimeout(timer);
+  }, [doneIds, calibratedStrings]);
+
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
+
+  function changeLanguage(next) {
+    setLang(next);
+    try {
+      localStorage.setItem('yeolTuner.language', next);
+    } catch {
+      /* 저장소 접근 불가 */
+    }
+  }
+
+  function changeTuneHaptic(next) {
+    setTuneHaptic(next);
+    if (next) hapticTap(true); // 켜는 순간 어떤 느낌인지 한 번 보여 준다.
+  }
 
   // 어떤 이유로든 사용자 제스처가 필요해지면(권한 대기, suspended 컨텍스트,
   // 마이크 회수) 다음 탭에서 복구를 시도한다. once 리스너가 아니어서 실패해도
@@ -997,153 +1349,146 @@ function App() {
     resetMeasurement();
   }, [instrumentKey, tuningKey]);
 
+  const centsText = !detected ? '--' : `${roundedCents > 0 ? '+' : roundedCents < 0 ? '−' : ''}${Math.abs(roundedCents)}`;
+  const targetFrequency = (detected?.target ?? selectedString).freq.toFixed(2);
+
   return (
-    <main className={`app ${needsGestureStart ? 'tap-ready' : ''}`}>
-      <section className="topbar" aria-label="튜너 설정">
+    <main className={`app view-${view} ${needsGestureStart ? 'tap-ready' : ''}`}>
+      <header className="app-header">
         <div className="brand">
           <span className="brand-mark"><img src="/icon-192.png" alt="" aria-hidden="true" /></span>
           <span className="brand-name">YEOL Tuner</span>
         </div>
-
-        <div className="controls">
-          <div className="segmented view-switch" aria-label="모드 전환">
-            <button className={view === 'tuner' ? 'active' : ''} onClick={() => setView('tuner')}>
-              <Music aria-hidden="true" />Tuner
-            </button>
-            <button className={view === 'metronome' ? 'active' : ''} onClick={() => setView('metronome')}>
-              <Timer aria-hidden="true" />Metronome
-            </button>
-          </div>
-
-          {view === 'tuner' && (
-            <>
-              <label className="select-wrap">
-                <Settings aria-hidden="true" />
-                <select value={instrumentKey} onChange={(event) => setInstrumentKey(event.target.value)} aria-label="악기 선택">
-                  {Object.entries(INSTRUMENTS).map(([key, value]) => (
-                    <option key={key} value={key}>{value.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="select-wrap">
-                <Settings aria-hidden="true" />
-                <select value={activeTuningKey} onChange={(event) => setTuningKey(event.target.value)} aria-label="튜닝 선택">
-                  {Object.entries(instrument.tunings).map(([key, value]) => (
-                    <option key={key} value={key}>{value.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="select-wrap">
-                <Settings aria-hidden="true" />
-                <select value={referencePitch} onChange={(event) => setReferencePitch(Number(event.target.value))} aria-label="기준 주파수 (A4)">
-                  {REFERENCE_PITCHES.map((hz) => (
-                    <option key={hz} value={hz}>{`A4 ${hz} Hz`}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="segmented" aria-label="튜닝 방식">
-                <button className={mode === 'auto' ? 'active' : ''} onClick={() => setMode('auto')}>Auto</button>
-                <button className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Manual</button>
-              </div>
-            </>
-          )}
+        <div className="segmented view-switch" aria-label={t.viewLabel}>
+          <button className={view === 'tuner' ? 'active' : ''} aria-pressed={view === 'tuner'} onClick={() => setView('tuner')}>Tuner</button>
+          <button className={view === 'metronome' ? 'active' : ''} aria-pressed={view === 'metronome'} onClick={() => setView('metronome')}>Metronome</button>
         </div>
-      </section>
+      </header>
 
-      <section className="hero" aria-label={view === 'tuner' ? '튜닝 상태' : '메트로놈'}>
-        {view === 'metronome' ? (
-          <Metronome />
-        ) : (
-        <div className="tuner-console">
-          <div className="readout">
-            <p className="eyebrow">{needsGestureStart ? 'Tap to start' : isListening ? 'Listening' : 'Ready'}</p>
-            <h1>{detected?.target.note ?? selectedString.note}</h1>
-            <p className={`status ${tuneTone}`}>{tuneState}</p>
-          </div>
+      {view === 'metronome' ? (
+        <Metronome t={t} lang={lang} />
+      ) : (
+        <>
+          <button className="settings-chip" onClick={() => setSheetOpen(true)} aria-label={t.openSettings} aria-haspopup="dialog">
+            <Music aria-hidden="true" />
+            <span className="settings-text">
+              {instrument.label}<i>·</i>{tuning.label}<i>·</i>A4 {referencePitch} Hz
+            </span>
+            <ChevronDown className="chevron" aria-hidden="true" />
+          </button>
 
-          <InstrumentVisual
-            instrumentKey={instrumentKey}
-            instrument={instrument}
-            strings={calibratedStrings}
-            activeString={visualString}
-          />
-
-          <div className="meter" role="meter" aria-valuemin="-50" aria-valuemax="50" aria-valuenow={roundedCents}>
-            <div className="meter-scale">
-              <span>-50</span>
-              <span>-25</span>
-              <span>0</span>
-              <span>+25</span>
-              <span>+50</span>
+          <section className={`tuner-console ${isInTune ? 'good' : ''}`} aria-label={t.tunerLabel}>
+            <div className="console-top">
+              {showComplete ? (
+                <span className="complete-banner" role="status"><Check aria-hidden="true" />{t.complete(calibratedStrings.length)}</span>
+              ) : (
+                <>
+                  <span className="eyebrow">
+                    {isListening && !needsGestureStart && <span className="live-dot" aria-hidden="true" />}
+                    {needsGestureStart ? 'Tap to start' : isListening ? 'Listening' : 'Ready'}
+                  </span>
+                  {mode === 'auto' ? (
+                    <span className="mode-chip"><RefreshCw aria-hidden="true" />Auto</span>
+                  ) : (
+                    <span className="mode-chips">
+                      <span className="mode-chip manual"><Lock aria-hidden="true" />{t.locked(selectedString.note)}</span>
+                      <button className="mode-chip ghost" onClick={() => setMode('auto')}><RefreshCw aria-hidden="true" />{t.backToAuto}</button>
+                    </span>
+                  )}
+                </>
+              )}
             </div>
-            <div className="rail">
-              <div className="center-line" />
-              <div className="needle-track">
-                <div className={`needle ${tuneTone}`} style={{ '--needle-position': `${displayCents + 50}%` }} />
+
+            <h1 className="note-name">{detected?.target.note ?? selectedString.note}</h1>
+            <p className={`guide ${tuneTone}`} aria-live="polite">
+              {guideMark && <span className="guide-mark">{guideMark}</span>}
+              {guideText}
+            </p>
+
+            <InstrumentVisual
+              instrumentKey={instrumentKey}
+              strings={calibratedStrings}
+              activeString={visualString}
+            />
+
+            <div className="meter" role="meter" aria-valuemin="-50" aria-valuemax="50" aria-valuenow={roundedCents}>
+              <div className="meter-scale" aria-hidden="true">
+                <span>-50</span>
+                <span>-25</span>
+                <span>0</span>
+                <span>+25</span>
+                <span>+50</span>
+              </div>
+              <div className="rail">
+                <div
+                  className={`rail-track ${tuneTone}`}
+                  style={{ '--needle-position': `${displayCents + 50}%`, '--fill-scale': Math.abs(displayCents) / 50 }}
+                >
+                  <span className="in-tune-zone" />
+                  <span className="rail-fill flat" />
+                  <span className="rail-fill sharp" />
+                  <div className={`needle ${tuneTone}`} />
+                </div>
               </div>
             </div>
-            <div className="cents">
-              <span>{detected ? `${roundedCents > 0 ? '+' : ''}${roundedCents}` : '--'}</span>
+
+            <div className={`cents ${tuneTone}`}>
+              <span>{centsText}</span>
               <small>cents</small>
             </div>
-            <div className={`action-guide ${tuneTone}`} aria-live="polite">
-              <strong>{actionGuide.mark}</strong>
-              <span>{actionGuide.label}</span>
-              <small>{actionGuide.sub}</small>
-            </div>
-          </div>
+            <p className="detail-line">
+              <span>{t.now} <em>{frequency ? frequency.toFixed(2) : '--'}</em></span>
+              <span>{t.heard} <em>{detected?.nearest.name ?? '--'}</em></span>
+              <span>{t.target} <em>{targetFrequency} Hz</em></span>
+            </p>
 
-          <div className="actions">
-            <button className={`mic ${isListening ? 'live' : ''}`} onClick={isListening ? () => stopListening({ user: true }) : () => startListening()}>
+            {error && <p className="error">{t.errors[error]}</p>}
+          </section>
+
+          <div className="flex-spacer" />
+
+          <StringRow
+            strings={calibratedStrings}
+            mode={mode}
+            selectedId={selectedString.id}
+            currentId={detected?.target.id ?? null}
+            doneIds={doneIds}
+            onSelect={selectString}
+            t={t}
+          />
+
+          <div className="bottom-bar">
+            <span className="input-level" aria-label={`${t.input} ${level}/5`}>
+              <Mic aria-hidden="true" />
+              <span className="level-bars" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((index) => <i key={index} className={index < level ? 'on' : ''} />)}
+              </span>
+              {t.input}
+            </span>
+            <button className={`mic-button ${isListening ? 'live' : ''}`} onClick={isListening ? () => stopListening({ user: true }) : () => startListening()}>
               {isListening ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
               {isListening ? 'Mic off' : 'Mic on'}
             </button>
-            <button className="icon-button" aria-label="측정값 초기화" onClick={resetMeasurement} title="측정값 초기화">
-              <RotateCcw aria-hidden="true" />
-            </button>
           </div>
-
-          {error && <p className="error">{error}</p>}
-        </div>
-        )}
-      </section>
-
-      {view === 'tuner' && (
-      <section className="details" aria-label="측정 정보">
-        <div>
-          <span>현재 주파수</span>
-          <strong>{frequency ? `${frequency.toFixed(2)} Hz` : '--'}</strong>
-        </div>
-        <div>
-          <span>감지 음</span>
-          <strong>{detected?.nearest.name ?? '--'}</strong>
-        </div>
-        <div>
-          <span>목표 주파수</span>
-          <strong>{detected?.target.freq.toFixed(2) ?? selectedString.freq.toFixed(2)} Hz</strong>
-        </div>
-        <div>
-          <span>입력 레벨</span>
-          <strong className="level"><Volume2 aria-hidden="true" />{volume}%</strong>
-        </div>
-      </section>
+        </>
       )}
 
-      {view === 'tuner' && (
-        <StringGrid
-          strings={calibratedStrings}
-          label={instrument.label}
-          mode={mode}
-          selectedId={selectedString.id}
-          currentId={detected?.target.id ?? null}
-          onSelect={selectString}
+      {sheetOpen && (
+        <SettingsSheet
+          t={t}
+          lang={lang}
+          instrumentKey={instrumentKey}
+          tuningKey={activeTuningKey}
+          referencePitch={referencePitch}
+          tuneHaptic={tuneHaptic}
+          onInstrument={setInstrumentKey}
+          onTuning={setTuningKey}
+          onReference={setReferencePitch}
+          onTuneHaptic={changeTuneHaptic}
+          onLanguage={changeLanguage}
+          onClose={closeSheet}
         />
       )}
-
-      <footer className="app-version">YEOL Tuner v{APP_VERSION}</footer>
     </main>
   );
 }
