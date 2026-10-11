@@ -130,7 +130,7 @@
         gap: 10px;
       }
 
-      .steps li {
+      .steps > li {
         display: grid;
         grid-template-columns: 34px 1fr;
         gap: 12px;
@@ -160,6 +160,23 @@
       .steps p {
         margin: 0;
         word-break: keep-all;
+      }
+
+      .substeps {
+        margin: 12px 0 0;
+        padding: 12px 14px 12px 32px;
+        border-radius: 10px;
+        background: rgba(255, 248, 236, 0.04);
+        border: 1px solid var(--line);
+        display: grid;
+        gap: 6px;
+        font-size: 0.92rem;
+        word-break: keep-all;
+      }
+
+      .substeps li::marker {
+        color: var(--gold);
+        font-weight: 900;
       }
 
       .note {
@@ -319,7 +336,13 @@
             <h3>테스터 그룹에 가입</h3>
             <p><strong>안드로이드 폰</strong>에서, 플레이스토어에 쓰는 구글 계정으로 아래 버튼을 눌러 <strong>그룹에 가입</strong>을 눌러 주세요. 가입하면 테스터로 자동 등록돼요.</p>
             <a class="button" href="https://groups.google.com/g/yeoltuner-test" rel="noopener">테스터 그룹 열기</a>
-            <p class="hint">그룹 회원 목록은 개발자만 볼 수 있어요. 그룹 화면에 "콘텐츠에 액세스할 권한이 없습니다"가 보여도 가입 버튼만 누르면 돼요.</p>
+            <ol class="substeps">
+              <li>오른쪽 위에 로그인 버튼이 보이면 <strong>플레이스토어에 쓰는 구글 계정</strong>으로 로그인해요.</li>
+              <li>화면 위쪽의 <strong>그룹에 가입</strong>을 눌러요. "이 콘텐츠에 액세스할 권한이 없습니다"가 같이 보여도 괜찮아요.</li>
+              <li>확인 창이 뜨면 설정은 그대로 두고 한 번 더 <strong>그룹에 가입</strong>을 눌러요.</li>
+              <li>"회원입니다" 같은 표시가 나오면 끝! 이 페이지로 돌아와 2번으로 가요.</li>
+            </ol>
+            <p class="hint">폰에 구글 계정이 여러 개라면, 그룹에 가입한 계정과 플레이스토어 계정이 같은지 꼭 확인해 주세요. 그룹 회원 목록은 개발자만 볼 수 있어요.</p>
           </div>
         </li>
         <li>
